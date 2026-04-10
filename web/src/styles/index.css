@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+body {
+  margin: 0;
+  padding: 0;
+}
+#root {
+  min-height: 100vh;
+}
+
+/* 全局主题样式 */
+body.dark {
+  background-color: #25262f;
+  color: #e0e0e0;
+  --c-color: #e0e0e0;
+}
+/* 确保所有页面容器在暗色模式下也有黑色背景 */
+body.dark #root {
+  background-color: #25262f;
+  min-height: 100vh;
+}
+/* 覆盖一些可能没有被主题变量覆盖到的元素 */
+body.dark .ant-layout {
+  background-color: #25262f;
+}
+body.dark .ant-layout-content {
+  background-color: #25262f;
+}
+
+body.light {
+  background-color: #f5f2eb;
+  color: #000000d9;
+  --c-color: #000000d9;
+}
+body.light #root {
+  background-color: #f5f2eb;
+}
+
+/* Tailwind CSS 变量 */
+@theme {
+  --color-primary: var(--app-color-primary);
+  --color-bg-base: var(--app-color-bg-base);
+  --color-bg-container: var(--app-color-bg-container);
+  --color-bg-elevated: var(--app-color-bg-elevated);
+  --color-bg-layout: var(--app-color-bg-layout);
+}

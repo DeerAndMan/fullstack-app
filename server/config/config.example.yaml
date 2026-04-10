@@ -1,0 +1,35 @@
+server:
+  port: 8080
+  mode: debug
+
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  username: app
+  password: app123
+  database: fullstack_app
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: "change-me-in-production-use-a-strong-secret"
+  access_expire: 24
+  refresh_expire: 168
+  issuer: "fullstack-app"
+
+upload:
+  path: "./uploads"
+  max_size: 10
+  allow_exts:
+    - ".jpg"
+    - ".jpeg"
+    - ".png"
+    - ".gif"
+    - ".pdf"
+    - ".xlsx"
