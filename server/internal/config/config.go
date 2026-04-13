@@ -2,9 +2,9 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -72,6 +72,6 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
 
-	slog.Info("config loaded", "file", path)
+	zap.L().Info("config loaded", zap.String("file", path))
 	return &cfg, nil
 }

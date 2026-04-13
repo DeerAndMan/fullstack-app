@@ -27,20 +27,20 @@ async function start() {
 
     console.log("SSR 页面（服务端渲染）：");
     console.table(
-      routes.ssrRoutes.map(r => ({
+      routes.ssrRoutes.map((r) => ({
         路径: r.path,
         标题: r.title,
         地址: `http://localhost:${port}${r.path}`,
-      }))
+      })),
     );
 
     console.log("SPA 页面（客户端渲染）：");
     console.table(
-      routes.spaRoutes.map(r => ({
+      routes.spaRoutes.map((r) => ({
         路径: r.path,
         标题: r.title,
         地址: `http://localhost:${port}${r.path}`,
-      }))
+      })),
     );
   });
 }

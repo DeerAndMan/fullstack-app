@@ -2,11 +2,11 @@ package database
 
 import (
 	"fmt"
-	"log/slog"
 
 	"fullstack-app/server/internal/config"
 	"fullstack-app/server/internal/model"
 
+	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -33,7 +33,7 @@ func NewMySQL(cfg *config.MySQLConfig) (*gorm.DB, error) {
 	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
 	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
 
-	slog.Info("mysql connected", "host", cfg.Host, "database", cfg.Database)
+	zap.L().Info("mysql connected", zap.String("host", cfg.Host), zap.String("database", cfg.Database))
 	return db, nil
 }
 

@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log/slog"
-	"os"
 
 	"fullstack-app/server/internal/config"
 	"fullstack-app/server/internal/database"
@@ -16,6 +14,7 @@ import (
 	"fullstack-app/server/pkg/upload"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -23,33 +22,29 @@ func main() {
 	flag.Parse()
 
 	// Logger
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	})))
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	zap.ReplaceGlobals(logger)
 
 	// Config
 	cfg, err := config.Load(*configPath)
 	if err != nil {
-		slog.Error("load config failed", "error", err)
-		os.Exit(1)
+		zap.L().Fatal("load config failed", zap.Error(err))
 	}
 
 	// MySQL
 	db, err := database.NewMySQL(&cfg.MySQL)
 	if err != nil {
-		slog.Error("connect mysql failed", "error", err)
-		os.Exit(1)
+		zap.L().Fatal("connect mysql failed", zap.Error(err))
 	}
 	if err := database.AutoMigrate(db); err != nil {
-		slog.Error("auto migrate failed", "error", err)
-		os.Exit(1)
+		zap.L().Fatal("auto migrate failed", zap.Error(err))
 	}
 
 	// Redis
 	_, err = database.NewRedis(&cfg.Redis)
 	if err != nil {
-		slog.Error("connect redis failed", "error", err)
-		os.Exit(1)
+		zap.L().Fatal("connect redis failed", zap.Error(err))
 	}
 
 	// JWT
@@ -90,6 +85,6 @@ func main() {
 	// Routes
 	router.Setup(h, handlers, jwtManager)
 
-	slog.Info("server starting", "port", cfg.Server.Port)
+	zap.L().Info("server starting", zap.Int("port", cfg.Server.Port))
 	h.Spin()
 }

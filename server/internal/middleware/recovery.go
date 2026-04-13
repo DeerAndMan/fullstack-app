@@ -3,11 +3,11 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"runtime"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"go.uber.org/zap"
 )
 
 func Recovery() app.HandlerFunc {
@@ -16,9 +16,9 @@ func Recovery() app.HandlerFunc {
 			if r := recover(); r != nil {
 				buf := make([]byte, 4096)
 				n := runtime.Stack(buf, false)
-				slog.Error("panic recovered",
-					"error", fmt.Sprintf("%v", r),
-					"stack", string(buf[:n]),
+				zap.L().Error("panic recovered",
+					zap.String("error", fmt.Sprintf("%v", r)),
+					zap.String("stack", string(buf[:n])),
 				)
 				c.AbortWithStatusJSON(http.StatusInternalServerError, map[string]any{
 					"code":    500,

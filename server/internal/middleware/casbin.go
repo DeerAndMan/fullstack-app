@@ -2,13 +2,13 @@ package middleware
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 
 	"fullstack-app/server/pkg/response"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/cloudwego/hertz/pkg/app"
+	"go.uber.org/zap"
 )
 
 func CasbinRBAC(enforcer *casbin.Enforcer) app.HandlerFunc {
@@ -19,7 +19,7 @@ func CasbinRBAC(enforcer *casbin.Enforcer) app.HandlerFunc {
 
 		ok, err := enforcer.Enforce(username, path, method)
 		if err != nil {
-			slog.Error("casbin enforce error", "error", err)
+			zap.L().Error("casbin enforce error", zap.Error(err))
 			c.AbortWithStatusJSON(http.StatusInternalServerError, response.Body{
 				Code:    500,
 				Message: "internal server error",

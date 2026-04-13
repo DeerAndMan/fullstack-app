@@ -2,10 +2,10 @@ package middleware
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"go.uber.org/zap"
 )
 
 func Logger() app.HandlerFunc {
@@ -19,24 +19,24 @@ func Logger() app.HandlerFunc {
 		latency := time.Since(start)
 		status := c.Response.StatusCode()
 
-		attrs := []any{
-			slog.String("method", method),
-			slog.String("path", path),
-			slog.Int("status", status),
-			slog.Duration("latency", latency),
-			slog.String("ip", c.ClientIP()),
+		fields := []zap.Field{
+			zap.String("method", method),
+			zap.String("path", path),
+			zap.Int("status", status),
+			zap.Duration("latency", latency),
+			zap.String("ip", c.ClientIP()),
 		}
 
 		if reqID := string(c.GetHeader("X-Request-ID")); reqID != "" {
-			attrs = append(attrs, slog.String("request_id", reqID))
+			fields = append(fields, zap.String("request_id", reqID))
 		}
 
 		if status >= 500 {
-			slog.Error("request", attrs...)
+			zap.L().Error("request", fields...)
 		} else if status >= 400 {
-			slog.Warn("request", attrs...)
+			zap.L().Warn("request", fields...)
 		} else {
-			slog.Info("request", attrs...)
+			zap.L().Info("request", fields...)
 		}
 	}
 }

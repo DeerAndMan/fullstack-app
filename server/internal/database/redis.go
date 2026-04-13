@@ -3,11 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"fullstack-app/server/internal/config"
 
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 func NewRedis(cfg *config.RedisConfig) (*redis.Client, error) {
@@ -21,6 +21,6 @@ func NewRedis(cfg *config.RedisConfig) (*redis.Client, error) {
 		return nil, fmt.Errorf("connect redis: %w", err)
 	}
 
-	slog.Info("redis connected", "addr", cfg.Addr())
+	zap.L().Info("redis connected", zap.String("addr", cfg.Addr()))
 	return rdb, nil
 }

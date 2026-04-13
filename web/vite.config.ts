@@ -12,16 +12,7 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   server: {
-    port: 5173,
-    proxy: {
-      "/api": {
-        target: "http://localhost:8080",
-        changeOrigin: true,
-      },
-      "/uploads": {
-        target: "http://localhost:8080",
-        changeOrigin: true,
-      },
-    },
+    port: 6565,
+    open: true,
   },
 });
