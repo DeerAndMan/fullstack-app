@@ -125,6 +125,45 @@ func (s *UserService) Delete(id uint) error {
 	return s.userRepo.Delete(id)
 }
 
+type AssignRoleRequest struct {
+	RoleID uint `json:"role_id" vd:"$>0"`
+}
+
+type AssignRolesRequest struct {
+	RoleIDs []uint `json:"role_ids" vd:"len($)>0"`
+}
+
+func (s *UserService) AssignRole(userID uint, req *AssignRoleRequest) error {
+	if _, err := s.userRepo.GetByID(userID); err != nil {
+		return errcode.ErrUserNotFound
+	}
+	return s.userRepo.AssignRoles(userID, []uint{req.RoleID})
+}
+
+func (s *UserService) AssignRoles(userID uint, req *AssignRolesRequest) error {
+	if _, err := s.userRepo.GetByID(userID); err != nil {
+		return errcode.ErrUserNotFound
+	}
+	return s.userRepo.AssignRoles(userID, req.RoleIDs)
+}
+
+func (s *UserService) GetUserRoles(userID uint) ([]model.Role, error) {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, errcode.ErrUserNotFound
+	}
+	return user.Roles, nil
+}
+
+func (s *UserService) UpdateAvatar(userID uint, avatar string) error {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return errcode.ErrUserNotFound
+	}
+	user.Avatar = avatar
+	return s.userRepo.Update(user)
+}
+
 func (s *UserService) List(req *ListUserRequest) ([]model.User, int64, error) {
 	if req.Page <= 0 {
 		req.Page = 1

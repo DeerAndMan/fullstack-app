@@ -57,6 +57,10 @@ func Setup(h *server.Hertz, handlers *Handlers, jwtManager *jwtpkg.Manager) {
 			users.GET("/:id", handlers.User.GetByID)
 			users.PUT("/:id", handlers.User.Update)
 			users.DELETE("/:id", handlers.User.Delete)
+			users.PUT("/:id/role", handlers.User.AssignRole)
+			users.POST("/:id/roles", handlers.User.AssignRoles)
+			users.GET("/:id/roles", handlers.User.GetRoles)
+			users.PUT("/:id/avatar", handlers.User.UpdateAvatar)
 		}
 
 		// Role
