@@ -46,6 +46,8 @@ func Setup(h *server.Hertz, handlers *Handlers, jwtManager *jwtpkg.Manager) {
 	protected := api.Group("")
 	protected.Use(middleware.JWTAuth(jwtManager))
 	{
+		// Auth (protected)
+		protected.POST("/auth/logout", handlers.Auth.Logout)
 		// User
 		users := protected.Group("/users")
 		{

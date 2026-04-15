@@ -44,7 +44,7 @@ func (h *AuthHandler) Login(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	tokenPair, err := h.authSvc.Login(&req)
+	loginResp, err := h.authSvc.Login(&req)
 	if err != nil {
 		if e, ok := err.(*errcode.Error); ok {
 			response.Fail(ctx, c, e)
@@ -54,7 +54,7 @@ func (h *AuthHandler) Login(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	response.OK(ctx, c, tokenPair)
+	response.OK(ctx, c, loginResp)
 }
 
 func (h *AuthHandler) RefreshToken(ctx context.Context, c *app.RequestContext) {
@@ -75,4 +75,13 @@ func (h *AuthHandler) RefreshToken(ctx context.Context, c *app.RequestContext) {
 	}
 
 	response.OK(ctx, c, tokenPair)
+}
+
+func (h *AuthHandler) Logout(ctx context.Context, c *app.RequestContext) {
+	if err := h.authSvc.Logout(); err != nil {
+		response.Fail(ctx, c, errcode.ErrInternal)
+		return
+	}
+
+	response.OKWithMessage(ctx, c, "logout success")
 }

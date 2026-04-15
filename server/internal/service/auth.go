@@ -63,7 +63,12 @@ func (s *AuthService) Register(req *RegisterRequest) error {
 	return s.userRepo.Create(user)
 }
 
-func (s *AuthService) Login(req *LoginRequest) (*jwtpkg.TokenPair, error) {
+type LoginResponse struct {
+	Token *jwtpkg.TokenPair `json:"token"`
+	User  *model.User       `json:"user"`
+}
+
+func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 	user, err := s.userRepo.GetByUsername(req.Username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -80,7 +85,21 @@ func (s *AuthService) Login(req *LoginRequest) (*jwtpkg.TokenPair, error) {
 		return nil, errcode.ErrInvalidCredentials
 	}
 
-	return s.jwtManager.GenerateTokenPair(user.ID, user.Username)
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, user.Username)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	// 重新查询用户信息（带角色预加载）
+	userWithRoles, err := s.userRepo.GetByID(user.ID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	return &LoginResponse{
+		Token: tokenPair,
+		User:  userWithRoles,
+	}, nil
 }
 
 func (s *AuthService) RefreshToken(req *RefreshTokenRequest) (*jwtpkg.TokenPair, error) {
@@ -90,4 +109,10 @@ func (s *AuthService) RefreshToken(req *RefreshTokenRequest) (*jwtpkg.TokenPair,
 	}
 
 	return s.jwtManager.GenerateTokenPair(claims.UserID, claims.Username)
+}
+
+func (s *AuthService) Logout() error {
+	// 当前 JWT 为无状态令牌，服务端不维护会话
+	// 后续可接入 Redis 黑名单机制
+	return nil
 }

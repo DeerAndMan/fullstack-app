@@ -11,7 +11,7 @@ tmp/
 .env
 .env.local
 .env.*.local
-server/config/config.yaml
+
 
 # IDE
 .idea/

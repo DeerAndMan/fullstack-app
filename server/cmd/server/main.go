@@ -114,6 +114,17 @@ func main() {
 	// Routes
 	router.Setup(h, handlers, jwtManager)
 
-	zap.L().Info("server starting", zap.Int("port", cfg.Server.Port))
+	// Startup banner
+	fmt.Println()
+	fmt.Println(color.CyanString("  ┌─────────────────────────────────────────┐"))
+	fmt.Println(color.CyanString("  │") + color.GreenString("   Fullstack App Server Ready              ") + color.CyanString("│"))
+	fmt.Println(color.CyanString("  ├─────────────────────────────────────────┤"))
+	fmt.Printf("  %s  %-8s %s\n", color.CyanString("│"), color.YellowString("Local:"), color.GreenString("http://localhost:%d", cfg.Server.Port))
+	fmt.Printf("  %s  %-8s %s\n", color.CyanString("│"), color.YellowString("Mode:"), cfg.Server.Mode)
+	fmt.Printf("  %s  %-8s %s\n", color.CyanString("│"), color.YellowString("MySQL:"), fmt.Sprintf("%s:%d/%s", cfg.MySQL.Host, cfg.MySQL.Port, cfg.MySQL.Database))
+	fmt.Printf("  %s  %-8s %s\n", color.CyanString("│"), color.YellowString("Redis:"), cfg.Redis.Addr())
+	fmt.Println(color.CyanString("  └─────────────────────────────────────────┘"))
+	fmt.Println()
+
 	h.Spin()
 }

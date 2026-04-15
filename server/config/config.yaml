@@ -5,9 +5,9 @@ server:
 mysql:
   host: 127.0.0.1
   port: 3306
-  username: app
-  password: app123
-  database: fullstack_app
+  username: root
+  password: "123456789"
+  database: energytest
   max_idle_conns: 10
   max_open_conns: 100
 
