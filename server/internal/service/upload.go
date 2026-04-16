@@ -1,10 +1,11 @@
 package service
 
 import (
+	"errors"
+	"mime/multipart"
+
 	"fullstack-app/server/pkg/errcode"
 	"fullstack-app/server/pkg/upload"
-
-	"mime/multipart"
 )
 
 type UploadService struct {
@@ -18,10 +19,10 @@ func NewUploadService(uploader *upload.Uploader) *UploadService {
 func (s *UploadService) Upload(header *multipart.FileHeader) (*upload.FileInfo, error) {
 	info, err := s.uploader.Save(header)
 	if err != nil {
-		if err.Error() == "file too large" {
+		if errors.Is(err, upload.ErrFileTooLarge) {
 			return nil, errcode.ErrFileTooLarge
 		}
-		if err.Error() == "file type not allowed" {
+		if errors.Is(err, upload.ErrFileTypeNotAllowed) {
 			return nil, errcode.ErrFileTypeNotAllowed
 		}
 		return nil, errcode.ErrInternal

@@ -62,7 +62,7 @@ func main() {
 	}
 
 	// MySQL
-	db, err := database.NewMySQL(&cfg.MySQL)
+	db, err := database.NewMySQL(&cfg.MySQL, cfg.Server.Mode)
 	if err != nil {
 		zap.L().Fatal("connect mysql failed", zap.Error(err))
 	}
@@ -100,7 +100,7 @@ func main() {
 	// Handler
 	handlers := &router.Handlers{
 		Auth:   handler.NewAuthHandler(authSvc),
-		User:   handler.NewUserHandler(userSvc),
+		User:   handler.NewUserHandler(userSvc, uploadSvc),
 		Role:   handler.NewRoleHandler(roleSvc),
 		Upload: handler.NewUploadHandler(uploadSvc),
 	}
@@ -112,7 +112,7 @@ func main() {
 	)
 
 	// Routes
-	router.Setup(h, handlers, jwtManager)
+	router.Setup(h, handlers, jwtManager, cfg.CORS.AllowOrigins)
 
 	// Startup banner
 	fmt.Println()

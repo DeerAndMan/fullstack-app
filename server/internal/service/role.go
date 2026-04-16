@@ -38,11 +38,19 @@ type ListRoleRequest struct {
 }
 
 func (s *RoleService) Create(req *CreateRoleRequest) error {
-	exists, err := s.roleRepo.ExistsByCode(req.Code)
+	codeExists, err := s.roleRepo.ExistsByCode(req.Code)
 	if err != nil {
 		return errcode.ErrInternal
 	}
-	if exists {
+	if codeExists {
+		return errcode.ErrRoleCodeExists
+	}
+
+	nameExists, err := s.roleRepo.ExistsByName(req.Name)
+	if err != nil {
+		return errcode.ErrInternal
+	}
+	if nameExists {
 		return errcode.ErrRoleNameExists
 	}
 

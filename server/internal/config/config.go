@@ -13,6 +13,7 @@ type Config struct {
 	Redis  RedisConfig  `mapstructure:"redis"`
 	JWT    JWTConfig    `mapstructure:"jwt"`
 	Upload UploadConfig `mapstructure:"upload"`
+	CORS   CORSConfig   `mapstructure:"cors"`
 }
 
 type ServerConfig struct {
@@ -54,21 +55,27 @@ type JWTConfig struct {
 }
 
 type UploadConfig struct {
-	Path      string `mapstructure:"path"`
-	MaxSize   int64  `mapstructure:"max_size"` // MB
+	Path      string   `mapstructure:"path"`
+	MaxSize   int64    `mapstructure:"max_size"` // MB
 	AllowExts []string `mapstructure:"allow_exts"`
 }
 
-func Load(path string) (*Config, error) {
-	viper.SetConfigFile(path)
-	viper.AutomaticEnv()
+type CORSConfig struct {
+	AllowOrigins []string `mapstructure:"allow_origins"`
+}
 
-	if err := viper.ReadInConfig(); err != nil {
+func Load(path string) (*Config, error) {
+	v := viper.New()
+	v.SetConfigFile(path)
+	v.SetEnvPrefix("APP")
+	v.AutomaticEnv()
+
+	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("read config: %w", err)
 	}
 
 	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
+	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
 

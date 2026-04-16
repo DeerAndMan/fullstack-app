@@ -2,8 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/base64"
-	"io"
 	"strconv"
 
 	"fullstack-app/server/internal/middleware"
@@ -15,11 +13,12 @@ import (
 )
 
 type UserHandler struct {
-	userSvc *service.UserService
+	userSvc   *service.UserService
+	uploadSvc *service.UploadService
 }
 
-func NewUserHandler(userSvc *service.UserService) *UserHandler {
-	return &UserHandler{userSvc: userSvc}
+func NewUserHandler(userSvc *service.UserService, uploadSvc *service.UploadService) *UserHandler {
+	return &UserHandler{userSvc: userSvc, uploadSvc: uploadSvc}
 }
 
 func (h *UserHandler) Create(ctx context.Context, c *app.RequestContext) {
@@ -215,21 +214,8 @@ func (h *UserHandler) UpdateAvatar(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	src, err := file.Open()
+	info, err := h.uploadSvc.Upload(file)
 	if err != nil {
-		response.Fail(ctx, c, errcode.ErrInternal)
-		return
-	}
-	defer src.Close()
-
-	fileBytes, err := io.ReadAll(src)
-	if err != nil {
-		response.Fail(ctx, c, errcode.ErrInternal)
-		return
-	}
-
-	avatar := base64.StdEncoding.EncodeToString(fileBytes)
-	if err := h.userSvc.UpdateAvatar(uint(id), avatar); err != nil {
 		if e, ok := err.(*errcode.Error); ok {
 			response.Fail(ctx, c, e)
 			return
@@ -238,5 +224,14 @@ func (h *UserHandler) UpdateAvatar(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	response.OK(ctx, c, map[string]string{"avatar": avatar})
+	if err := h.userSvc.UpdateAvatar(uint(id), info.FilePath); err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			response.Fail(ctx, c, e)
+			return
+		}
+		response.Fail(ctx, c, errcode.ErrInternal)
+		return
+	}
+
+	response.OK(ctx, c, map[string]string{"avatar": info.FilePath})
 }

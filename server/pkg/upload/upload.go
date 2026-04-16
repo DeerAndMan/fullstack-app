@@ -1,9 +1,11 @@
 package upload
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,6 +13,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+)
+
+var (
+	ErrFileTooLarge     = errors.New("file too large")
+	ErrFileTypeNotAllowed = errors.New("file type not allowed")
 )
 
 type Uploader struct {
@@ -36,12 +43,12 @@ type FileInfo struct {
 
 func (u *Uploader) Save(header *multipart.FileHeader) (*FileInfo, error) {
 	if header.Size > u.maxSize {
-		return nil, fmt.Errorf("file too large: %d bytes (max: %d bytes)", header.Size, u.maxSize)
+		return nil, fmt.Errorf("%w: %d bytes (max: %d bytes)", ErrFileTooLarge, header.Size, u.maxSize)
 	}
 
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if !slices.Contains(u.allowExts, ext) {
-		return nil, fmt.Errorf("file type not allowed: %s", ext)
+		return nil, fmt.Errorf("%w: %s", ErrFileTypeNotAllowed, ext)
 	}
 
 	// date-based directory
@@ -64,16 +71,27 @@ func (u *Uploader) Save(header *multipart.FileHeader) (*FileInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create file: %w", err)
 	}
-	defer dst.Close()
 
 	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		os.Remove(dstPath)
 		return nil, fmt.Errorf("save file: %w", err)
 	}
+
+	// 嗅探真实 MIME 类型
+	mimeType := header.Header.Get("Content-Type")
+	if _, err := dst.Seek(0, io.SeekStart); err == nil {
+		buf := make([]byte, 512)
+		if n, err := dst.Read(buf); err == nil {
+			mimeType = http.DetectContentType(buf[:n])
+		}
+	}
+	dst.Close()
 
 	return &FileInfo{
 		FileName: header.Filename,
 		FilePath: filepath.Join(dateDir, newName),
 		FileSize: header.Size,
-		MimeType: header.Header.Get("Content-Type"),
+		MimeType: mimeType,
 	}, nil
 }

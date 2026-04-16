@@ -42,8 +42,9 @@ var (
 
 // Role errors
 var (
-	ErrRoleNotFound  = New(30001, "role not found", http.StatusNotFound)
+	ErrRoleNotFound   = New(30001, "role not found", http.StatusNotFound)
 	ErrRoleNameExists = New(30002, "role name already exists", http.StatusBadRequest)
+	ErrRoleCodeExists = New(30003, "role code already exists", http.StatusBadRequest)
 )
 
 // Upload errors

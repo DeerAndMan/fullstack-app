@@ -135,14 +135,20 @@ type AssignRolesRequest struct {
 
 func (s *UserService) AssignRole(userID uint, req *AssignRoleRequest) error {
 	if _, err := s.userRepo.GetByID(userID); err != nil {
-		return errcode.ErrUserNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errcode.ErrUserNotFound
+		}
+		return errcode.ErrInternal
 	}
 	return s.userRepo.AssignRoles(userID, []uint{req.RoleID})
 }
 
 func (s *UserService) AssignRoles(userID uint, req *AssignRolesRequest) error {
 	if _, err := s.userRepo.GetByID(userID); err != nil {
-		return errcode.ErrUserNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errcode.ErrUserNotFound
+		}
+		return errcode.ErrInternal
 	}
 	return s.userRepo.AssignRoles(userID, req.RoleIDs)
 }
@@ -150,7 +156,10 @@ func (s *UserService) AssignRoles(userID uint, req *AssignRolesRequest) error {
 func (s *UserService) GetUserRoles(userID uint) ([]model.Role, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
-		return nil, errcode.ErrUserNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errcode.ErrUserNotFound
+		}
+		return nil, errcode.ErrInternal
 	}
 	return user.Roles, nil
 }
@@ -158,7 +167,10 @@ func (s *UserService) GetUserRoles(userID uint) ([]model.Role, error) {
 func (s *UserService) UpdateAvatar(userID uint, avatar string) error {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
-		return errcode.ErrUserNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errcode.ErrUserNotFound
+		}
+		return errcode.ErrInternal
 	}
 	user.Avatar = avatar
 	return s.userRepo.Update(user)

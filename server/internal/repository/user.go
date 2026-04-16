@@ -26,7 +26,7 @@ func (r *UserRepository) GetByID(id uint) (*model.User, error) {
 
 func (r *UserRepository) GetByUsername(username string) (*model.User, error) {
 	var user model.User
-	err := r.db.Where("username = ?", username).First(&user).Error
+	err := r.db.Preload("Roles").Where("username = ?", username).First(&user).Error
 	return &user, err
 }
 

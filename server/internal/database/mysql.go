@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"time"
 
 	"fullstack-app/server/internal/config"
 	"fullstack-app/server/internal/model"
@@ -12,8 +13,11 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func NewMySQL(cfg *config.MySQLConfig) (*gorm.DB, error) {
+func NewMySQL(cfg *config.MySQLConfig, serverMode string) (*gorm.DB, error) {
 	logLevel := logger.Info
+	if serverMode == "release" {
+		logLevel = logger.Warn
+	}
 	if cfg.Host == "" {
 		return nil, fmt.Errorf("mysql host is required")
 	}
@@ -32,6 +36,7 @@ func NewMySQL(cfg *config.MySQLConfig) (*gorm.DB, error) {
 	}
 	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
 	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	zap.L().Info("mysql connected", zap.String("host", cfg.Host), zap.String("database", cfg.Database))
 	return db, nil

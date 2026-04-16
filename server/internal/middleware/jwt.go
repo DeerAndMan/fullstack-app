@@ -31,7 +31,7 @@ func JWTAuth(jwtManager *jwtpkg.Manager) app.HandlerFunc {
 		}
 
 		tokenStr := strings.TrimPrefix(auth, BearerPrefix)
-		claims, err := jwtManager.ParseToken(tokenStr)
+		claims, err := jwtManager.ParseAccessToken(tokenStr)
 		if err != nil {
 			code := errcode.ErrTokenInvalid
 			if strings.Contains(err.Error(), "expired") {

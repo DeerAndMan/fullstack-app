@@ -90,20 +90,14 @@ func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 		return nil, errcode.ErrInternal
 	}
 
-	// 重新查询用户信息（带角色预加载）
-	userWithRoles, err := s.userRepo.GetByID(user.ID)
-	if err != nil {
-		return nil, errcode.ErrInternal
-	}
-
 	return &LoginResponse{
 		Token: tokenPair,
-		User:  userWithRoles,
+		User:  user,
 	}, nil
 }
 
 func (s *AuthService) RefreshToken(req *RefreshTokenRequest) (*jwtpkg.TokenPair, error) {
-	claims, err := s.jwtManager.ParseToken(req.RefreshToken)
+	claims, err := s.jwtManager.ParseRefreshToken(req.RefreshToken)
 	if err != nil {
 		return nil, errcode.ErrTokenInvalid
 	}
