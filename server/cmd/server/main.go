@@ -100,7 +100,7 @@ func main() {
 	// Handler
 	handlers := &router.Handlers{
 		Auth:   handler.NewAuthHandler(authSvc),
-		User:   handler.NewUserHandler(userSvc, uploadSvc),
+		User:   handler.NewUserHandler(userSvc),
 		Role:   handler.NewRoleHandler(roleSvc),
 		Upload: handler.NewUploadHandler(uploadSvc),
 	}

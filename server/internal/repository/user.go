@@ -20,13 +20,13 @@ func (r *UserRepository) Create(user *model.User) error {
 
 func (r *UserRepository) GetByID(id uint) (*model.User, error) {
 	var user model.User
-	err := r.db.Preload("Roles").First(&user, id).Error
+	err := r.db.First(&user, id).Error
 	return &user, err
 }
 
-func (r *UserRepository) GetByUsername(username string) (*model.User, error) {
+func (r *UserRepository) GetByName(name string) (*model.User, error) {
 	var user model.User
-	err := r.db.Preload("Roles").Where("username = ?", username).First(&user).Error
+	err := r.db.Where("name = ?", name).First(&user).Error
 	return &user, err
 }
 
@@ -44,7 +44,7 @@ func (r *UserRepository) List(page, pageSize int, keyword string) ([]model.User,
 
 	query := r.db.Model(&model.User{})
 	if keyword != "" {
-		query = query.Where("username LIKE ? OR nickname LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+		query = query.Where("name LIKE ? OR email LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -52,21 +52,12 @@ func (r *UserRepository) List(page, pageSize int, keyword string) ([]model.User,
 	}
 
 	offset := (page - 1) * pageSize
-	err := query.Preload("Roles").Offset(offset).Limit(pageSize).Order("id DESC").Find(&users).Error
+	err := query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&users).Error
 	return users, total, err
 }
 
-func (r *UserRepository) ExistsByUsername(username string) (bool, error) {
+func (r *UserRepository) ExistsByName(name string) (bool, error) {
 	var count int64
-	err := r.db.Model(&model.User{}).Where("username = ?", username).Count(&count).Error
+	err := r.db.Model(&model.User{}).Where("name = ?", name).Count(&count).Error
 	return count > 0, err
-}
-
-func (r *UserRepository) AssignRoles(userID uint, roleIDs []uint) error {
-	user := &model.User{BaseModel: model.BaseModel{ID: userID}}
-	var roles []model.Role
-	if err := r.db.Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
-		return err
-	}
-	return r.db.Model(user).Association("Roles").Replace(roles)
 }

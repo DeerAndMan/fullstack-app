@@ -22,13 +22,12 @@ func NewAuthService(userRepo *repository.UserRepository, jwtManager *jwtpkg.Mana
 }
 
 type RegisterRequest struct {
-	Username string `json:"username" vd:"len($)>0 && len($)<=64"`
+	Name     string `json:"name" vd:"len($)>0 && len($)<=64"`
 	Password string `json:"password" vd:"len($)>=6 && len($)<=32"`
-	Nickname string `json:"nickname"`
 }
 
 type LoginRequest struct {
-	Username string `json:"username" vd:"len($)>0"`
+	Name     string `json:"name" vd:"len($)>0"`
 	Password string `json:"password" vd:"len($)>0"`
 }
 
@@ -37,7 +36,7 @@ type RefreshTokenRequest struct {
 }
 
 func (s *AuthService) Register(req *RegisterRequest) error {
-	exists, err := s.userRepo.ExistsByUsername(req.Username)
+	exists, err := s.userRepo.ExistsByName(req.Name)
 	if err != nil {
 		return errcode.ErrInternal
 	}
@@ -51,15 +50,9 @@ func (s *AuthService) Register(req *RegisterRequest) error {
 	}
 
 	user := &model.User{
-		Username: req.Username,
+		Name:     req.Name,
 		Password: string(hashed),
-		Nickname: req.Nickname,
-		Status:   1,
 	}
-	if user.Nickname == "" {
-		user.Nickname = user.Username
-	}
-
 	return s.userRepo.Create(user)
 }
 
@@ -69,7 +62,7 @@ type LoginResponse struct {
 }
 
 func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
-	user, err := s.userRepo.GetByUsername(req.Username)
+	user, err := s.userRepo.GetByName(req.Name)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errcode.ErrInvalidCredentials
@@ -77,15 +70,11 @@ func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 		return nil, errcode.ErrInternal
 	}
 
-	if user.Status == 0 {
-		return nil, errcode.ErrUserDisabled
-	}
-
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return nil, errcode.ErrInvalidCredentials
 	}
 
-	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, user.Username)
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, user.Name)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
