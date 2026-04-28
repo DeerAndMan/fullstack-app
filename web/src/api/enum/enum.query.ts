@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { getRoleList } from "@/api/enum";
+import { getRoleList } from "./enum.service";
 
 export const roleQuery = (enabled = true) =>
   useQuery({

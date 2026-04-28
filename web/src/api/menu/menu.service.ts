@@ -1,6 +1,6 @@
-import { request, apiControl } from "@/api";
+import { request, apiControl } from "../";
 
-import type { PromiseResponseData } from "@/api";
+import type { PromiseResponseData } from "../";
 import type { MenuItemType, MenuRouterType, RoleRoutingType } from "@/types/menu-router";
 
 export const getMenuRouterList = (): PromiseResponseData<MenuItemType[]> =>

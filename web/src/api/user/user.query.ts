@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
-import { userApi } from "@/api";
+import * as userApi from "./user.service";
 
 import type { CallbackFunction } from "@/types/constants";
-import type { ResponseData } from "@/api";
+import type { ResponseData } from "../";
 import type { Account, Role } from "@/types/user";
 
 export const userQuery = (enabled = true) => {
@@ -28,9 +28,6 @@ export const getQueryUserList = () => {
   return queryList?.data || [];
 };
 
-/**
- * 添加编辑用户角色
- */
 export const userRoleMutation = (callback?: CallbackFunction<Role>) => {
   const queryClient = useQueryClient();
 

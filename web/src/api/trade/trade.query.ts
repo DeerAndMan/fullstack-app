@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 
-import { getTrade } from "@/api/trade";
+import { getTrade } from "./trade.service";
 
 const dateFormat = "YYYY-MM-DD";
 

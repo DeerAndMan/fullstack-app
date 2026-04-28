@@ -3,7 +3,7 @@ import { Button, Space, Switch, DatePicker, Card } from "antd";
 
 import dayjs from "dayjs";
 import { DualAxesChart, LineChart } from "@/components";
-import { tradeListQuery } from "@/hooks/query/use-query-trade";
+import { tradeListQuery } from "@/api/trade";
 
 import type { RangePickerProps } from "antd/es/date-picker";
 import type { EnergyItem } from "./type";

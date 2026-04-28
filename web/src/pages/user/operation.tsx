@@ -5,7 +5,7 @@ import AddEditUserModal from "@/sections/user/AddEditUserModal";
 import AddEditUserRoleModal from "@/sections/user/AddEditUserRoleModal";
 import { base64ToImg } from "@/utils/img";
 import { userApi } from "@/api";
-import { userQuery } from "@/hooks/query/user-query-user";
+import { userQuery } from "@/api/user/user.query";
 import { useAuthStore } from "@/stores/auth";
 import { useGlobalStore } from "@/stores/global";
 import { RoleKey } from "@/types/enum";

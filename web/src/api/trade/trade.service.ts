@@ -1,9 +1,9 @@
 import z from "zod";
-import { apiControl, request, RequestSchema } from "@/api";
+import { apiControl, request, RequestSchema } from "../";
 import { TradeItemSchema } from "@/types/schema";
 
 import type { TradeItem } from "@/pages/trade/type";
-import type { PromiseResponseData } from "@/api";
+import type { PromiseResponseData } from "../";
 import type { TradeParams } from "@/types/schema";
 
 // 使用类型化的请求函数，返回类型从 schema 自动推断

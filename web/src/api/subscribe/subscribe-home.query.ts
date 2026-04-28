@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import z from "zod";
 
-import { apiControl, RequestPost, RequestPut, RequestSchema } from "@/api";
+import { apiControl, RequestPost, RequestPut, RequestSchema } from "../";
 import { useGlobalStore } from "@/stores/global";
 
 import { SubscribeListSchema } from "@/types/xq/subscribe/home";

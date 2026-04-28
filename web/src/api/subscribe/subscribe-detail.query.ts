@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import z from "zod";
 
-import { apiControl, RequestSchema } from "@/api";
+import { apiControl, RequestSchema } from "../";
 import { SubscribeItemSchema, ThemeContentItemSchema } from "@/types/xq/subscribe/home";
 
 const DetailTableSchema = z.object({

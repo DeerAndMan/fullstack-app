@@ -1,7 +1,7 @@
-import { apiControl, request } from "@/api";
+import { apiControl, request } from "../";
 
 import type { AxiosRequestHeaders } from "axios";
-import type { PartialCustomRequestConfig, PromiseResponseData } from "@/api";
+import type { PartialCustomRequestConfig, PromiseResponseData } from "../";
 import type { Account, AddAccount, Role } from "@/types/user";
 
 export type LoginParams = {

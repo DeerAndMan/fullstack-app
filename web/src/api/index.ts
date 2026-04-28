@@ -1,5 +1,5 @@
 export * from "./request";
 export * from "./request-schema";
 export * from "./api-control";
-export * as userApi from "./user";
-export * as tradeApi from "./trade";
+export * as userApi from "./user/user.service";
+export * as tradeApi from "./trade/trade.service";

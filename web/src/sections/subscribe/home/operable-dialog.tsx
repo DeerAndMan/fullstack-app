@@ -1,6 +1,6 @@
 import { Button, Form, InputNumber, Input, Modal } from "antd";
 
-import { useQuerySubscribeHome } from "@/hooks/query/subscribe";
+import { useQuerySubscribeHome } from "@/api/subscribe";
 import { useBoolean } from "@/hooks/customHooks/useBoolean";
 
 export default function OperableDialog() {

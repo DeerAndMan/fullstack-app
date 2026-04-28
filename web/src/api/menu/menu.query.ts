@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 import { useGlobalStore } from "@/stores/global";
-import { getMenuRouterList, addRoleRouting, getRoleRoutingByRoleId } from "@/api/menu-router";
+import { getMenuRouterList, addRoleRouting, getRoleRoutingByRoleId } from "./menu.service";
 
 import type { RoleRoutingType } from "@/types/menu-router";
 
@@ -23,10 +23,6 @@ export const menuListQuery = (enabled = true) => {
   return { queryList, refresh };
 };
 
-/**
- * 添加角色路由
- * @returns
- */
 export const roleRoutingMutation = () => {
   const messageApi = useGlobalStore(s => s.messageApi);
 
@@ -38,18 +34,11 @@ export const roleRoutingMutation = () => {
         messageApi?.error(data.message || "添加角色路由失败!!!!");
         return;
       }
-      // queryClient.invalidateQueries({ queryKey: ["menu", "router", "list"] });
     },
-    onError: () => {
-      // queryClient.invalidateQueries({ queryKey: ["menu", "router", "list"] });
-    },
+    onError: () => {},
   });
 };
 
-/**
- * 根据角色ID获取角色路由
- * @returns 角色路由
- */
 export const getRoleRoutingByRoleIdQuery = (roleId: number) =>
   useQuery({
     queryKey: ["menu", "router", "roleRoutingByRoleId", roleId],

@@ -4,7 +4,7 @@ import { UserOutlined } from "@ant-design/icons";
 
 import ROUTER_PATH from "@/router/section/router-path";
 import { base64ToImg } from "@/utils/img";
-import { userQuery } from "@/hooks/query/user-query-user";
+import { userQuery } from "@/api/user/user.query";
 
 import type { TableColumnsType } from "antd";
 import type { Account, Role } from "@/types/user";
