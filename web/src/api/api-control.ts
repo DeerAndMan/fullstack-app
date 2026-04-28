@@ -1,6 +1,6 @@
 export const apiControl = {
   user: {
-    login: "/admin/user/login",
+    login: "/api/v1/auth/login",
     admin: "/admin/user",
   },
   enum: {

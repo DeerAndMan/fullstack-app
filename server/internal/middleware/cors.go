@@ -19,7 +19,7 @@ func CORS(allowOrigins []string) app.HandlerFunc {
 		}
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Request-ID")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Request-ID, saltlength")
 		c.Header("Access-Control-Expose-Headers", "Content-Length, Content-Type, x-new-token")
 		c.Header("Access-Control-Max-Age", "86400")
 

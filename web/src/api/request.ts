@@ -24,7 +24,7 @@ export type CustomRequestConfig = RequestConfig & InternalAxiosRequestConfig;
 export type PartialCustomRequestConfig = Partial<CustomRequestConfig>;
 
 const statusList = [401, 403];
-const tokenErrList = [101, 102, 103];
+const tokenErrList = [401, 10002, 10003];
 
 export const BASE_API = import.meta.env.VITE_WEB_BASE_URL;
 
@@ -94,27 +94,29 @@ request.interceptors.response.use(
       return res;
     }
 
-    if (!(data instanceof Blob) && res.data.code === 200) {
+    if (!(data instanceof Blob) && res.data.code === 0) {
       if (successMsg) {
         if (typeof successMsg === "string") {
           message.success(successMsg);
         } else {
-          message.success(res.data.msg);
+          message.success(res.data.message ?? res.data.msg);
         }
       }
-    } else if (!(data instanceof Blob) && errorMsg) {
+    } else if (!(data instanceof Blob) && res.data.code !== 0 && errorMsg) {
       if (typeof errorMsg === "string") {
         message.error(errorMsg);
       } else {
-        message.error(res?.data?.msg ?? "出错啦");
+        message.error(res?.data?.message ?? res?.data?.msg ?? "出错啦");
       }
     }
 
-    if (res.data.code === 1) {
-      return Promise.reject(res.data);
-    } else if (tokenErrList.includes(res.data.code)) {
+    if (tokenErrList.includes(res.data.code)) {
       useAuthStore.getState().clearToken();
-      return Promise.reject(new Error(res.data.msg));
+      return Promise.reject(new Error(res.data.message ?? res.data.msg));
+    }
+
+    if (res.data.code !== 0) {
+      return Promise.reject(res.data);
     }
 
     return res.data;
@@ -125,13 +127,12 @@ request.interceptors.response.use(
     const { status, response } = err;
     const data = response?.data as ResponseData;
 
-    if (status && statusList.includes(status) && tokenErrList.includes(data.code)) {
+    if (status && statusList.includes(status) && tokenErrList.includes(data?.code)) {
       useAuthStore.getState().clearToken();
-      Promise.reject(new Error(data.msg));
-      return;
+      return Promise.reject(new Error(data.msg));
     }
 
-    Promise.reject(err?.response?.data || "出错啦");
+    return Promise.reject(err?.response?.data || "出错啦");
   },
 );
 

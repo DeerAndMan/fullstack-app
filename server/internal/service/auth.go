@@ -23,7 +23,7 @@ func NewAuthService(userRepo *repository.UserRepository, jwtManager *jwtpkg.Mana
 
 type RegisterRequest struct {
 	Name     string `json:"name" vd:"len($)>0 && len($)<=64"`
-	Password string `json:"password" vd:"len($)>=6 && len($)<=32"`
+	Password string `json:"password" vd:"len($)>0"`
 }
 
 type LoginRequest struct {

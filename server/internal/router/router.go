@@ -33,7 +33,7 @@ func Setup(h *server.Hertz, handlers *Handlers, jwtManager *jwtpkg.Manager, allo
 	api := h.Group("/api/v1")
 
 	protected := api.Group("")
-	// protected.Use(middleware.JWTAuth(jwtManager))
+	protected.Use(middleware.JWTAuth(jwtManager))
 
 	registerAuthRoutes(api, protected, handlers.Auth)
 	registerUserRoutes(protected, handlers.User)

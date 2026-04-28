@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button, Checkbox, Form, Input } from "antd";
 import { toast } from "react-toastify";
-import { encryptPassword, setAuthCookie } from "@/utils";
+import { setAuthCookie } from "@/utils";
 import { useAuthStore } from "@/stores/auth";
 import { userApi } from "@/api";
 
@@ -15,26 +15,24 @@ type FieldType = {
 
 export const Login = () => {
   const navigator = useNavigate();
-  const { setToken, setUser, setRole, setMenuRoles } = useAuthStore();
+  const { setToken, setUser } = useAuthStore();
 
   const login = (data: FieldType) => {
     if (!data.username || !data.password) return;
-    const encryptedPassword = encryptPassword(data.password.trim(), 21);
 
     userApi
-      .login({ username: data.username.trim(), password: encryptedPassword }, { saltLength: 21 })
+      .login({ name: data.username.trim(), password: data.password.trim() }, {})
       .then(res => {
         if (res.code === 0 && res.data) {
-          setToken(res.data.token);
+          setToken(res.data.token.access_token);
           setUser(res.data.user);
-          setRole(res.data.role);
-          setMenuRoles(res.data.menuRoles);
-          setAuthCookie(res.data.token);
+          setAuthCookie(res.data.token.access_token);
           navigator("/", { replace: true });
         } else {
           toast.error(res.msg);
         }
-      });
+      })
+      .catch(() => {});
   };
 
   const onFinish: FormProps<FieldType>["onFinish"] = values => {
