@@ -6,7 +6,9 @@
       "WebSearch",
       "Bash(npx tsc *)",
       "Bash(git checkout *)",
-      "Bash(go mod *)"
+      "Bash(go mod *)",
+      "Bash(go test *)",
+      "Bash(make *)"
     ]
   }
 }
