@@ -34,6 +34,10 @@ upload:
     - ".pdf"
     - ".xlsx"
 
+ai:
+  base_url: "http://192.168.10.4:5001"
+  token: "app-Fo5YjsGfla8kthuWJdmgAptg"
+
 cors:
   allow_origins:
     - "http://localhost:6565"

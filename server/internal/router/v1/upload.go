@@ -1,4 +1,4 @@
-package router
+package v1
 
 import (
 	"fullstack-app/server/internal/handler"

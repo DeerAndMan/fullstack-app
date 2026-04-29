@@ -14,6 +14,12 @@ type Config struct {
 	JWT    JWTConfig    `mapstructure:"jwt"`
 	Upload UploadConfig `mapstructure:"upload"`
 	CORS   CORSConfig   `mapstructure:"cors"`
+	AI     AIConfig     `mapstructure:"ai"`
+}
+
+type AIConfig struct {
+	BaseURL string `mapstructure:"base_url"`
+	Token   string `mapstructure:"token"`
 }
 
 type ServerConfig struct {

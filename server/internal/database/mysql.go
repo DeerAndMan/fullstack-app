@@ -46,5 +46,8 @@ func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&model.User{},
 		&model.Role{},
+		&model.Energy{},
+		&model.Summary{},
+		&model.JyData{},
 	)
 }
