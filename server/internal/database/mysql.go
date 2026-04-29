@@ -46,6 +46,12 @@ func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&model.User{},
 		&model.Role{},
+		&model.Menu{},
+		&model.SysUserRole{},
+		&model.SysMenuRole{},
+		&model.XqSubscription{},
+		&model.XqThemeContent{},
+		&model.Image{},
 		&model.Energy{},
 		&model.Summary{},
 		&model.JyData{},

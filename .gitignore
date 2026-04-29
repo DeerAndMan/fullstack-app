@@ -11,7 +11,8 @@ tmp/
 .env
 .env.local
 .env.*.local
-
+.claude
+.claude/
 
 # IDE
 .idea/

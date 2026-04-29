@@ -64,6 +64,6 @@ func (r *RoleRepository) ExistsByCode(code string) (bool, error) {
 
 func (r *RoleRepository) GetAll() ([]model.Role, error) {
 	var roles []model.Role
-	err := r.db.Where("role_status = ? AND del_flag = ?", 1, 0).Find(&roles).Error
+	err := r.db.Where("del_flag = ?", 0).Order("sort ASC, role_id ASC").Find(&roles).Error
 	return roles, err
 }

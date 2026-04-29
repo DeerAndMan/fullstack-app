@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"time"
 
 	"fullstack-app/server/internal/model"
 	"fullstack-app/server/internal/repository"
@@ -56,12 +57,17 @@ func (s *RoleService) Create(req *CreateRoleRequest) error {
 		return errcode.ErrRoleNameExists
 	}
 
+	now := time.Now()
 	role := &model.Role{
 		RoleName:   req.RoleName,
 		RoleKey:    req.RoleKey,
 		Sort:       req.Sort,
 		Remark:     req.Remark,
 		RoleStatus: 1,
+		CreateBy:   "",
+		CreateTime: now,
+		UpdateBy:   "",
+		UpdateTime: now,
 		DelFlag:    0,
 	}
 	return s.roleRepo.Create(role)
@@ -102,6 +108,7 @@ func (s *RoleService) Update(id uint, req *UpdateRoleRequest) error {
 	if req.RoleStatus != nil {
 		role.RoleStatus = *req.RoleStatus
 	}
+	role.UpdateTime = time.Now()
 
 	return s.roleRepo.Update(role)
 }

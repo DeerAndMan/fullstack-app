@@ -22,13 +22,13 @@ func NewUserService(userRepo *repository.UserRepository) *UserService {
 type CreateUserRequest struct {
 	Name     string `json:"name" vd:"len($)>0 && len($)<=64"`
 	Password string `json:"password" vd:"len($)>=6 && len($)<=32"`
-	Age      int8   `json:"age"`
+	Age      int    `json:"age"`
 	Email    string `json:"email"`
 }
 
 type UpdateUserRequest struct {
 	Name        string `json:"name"`
-	Age         *int8  `json:"age"`
+	Age         *int   `json:"age"`
 	Email       string `json:"email"`
 	Description string `json:"description"`
 }
@@ -37,6 +37,37 @@ type ListUserRequest struct {
 	Page     int    `query:"page"`
 	PageSize int    `query:"page_size"`
 	Keyword  string `query:"keyword"`
+}
+
+type UserResponse struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Age         int    `json:"age"`
+	Email       string `json:"email"`
+	Description string `json:"description"`
+	Status      int8   `json:"status"`
+}
+
+func ToUserResponse(user *model.User) *UserResponse {
+	if user == nil {
+		return nil
+	}
+	return &UserResponse{
+		ID:          user.ID,
+		Name:        user.Name,
+		Age:         user.Age,
+		Email:       user.Email,
+		Description: user.Description,
+		Status:      user.Status,
+	}
+}
+
+func ToUserResponses(users []model.User) []UserResponse {
+	list := make([]UserResponse, 0, len(users))
+	for i := range users {
+		list = append(list, *ToUserResponse(&users[i]))
+	}
+	return list
 }
 
 func (s *UserService) Create(req *CreateUserRequest) error {
@@ -54,7 +85,7 @@ func (s *UserService) Create(req *CreateUserRequest) error {
 	return s.userRepo.Create(user)
 }
 
-func (s *UserService) GetByID(id uint) (*model.User, error) {
+func (s *UserService) GetByID(id uint) (*UserResponse, error) {
 	user, err := s.userRepo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -62,7 +93,7 @@ func (s *UserService) GetByID(id uint) (*model.User, error) {
 		}
 		return nil, errcode.ErrInternal
 	}
-	return user, nil
+	return ToUserResponse(user), nil
 }
 
 func (s *UserService) Update(id uint, req *UpdateUserRequest) error {
@@ -97,12 +128,16 @@ func (s *UserService) Delete(id uint) error {
 	return s.userRepo.Delete(id)
 }
 
-func (s *UserService) List(req *ListUserRequest) ([]model.User, int64, error) {
+func (s *UserService) List(req *ListUserRequest) ([]UserResponse, int64, error) {
 	if req.Page <= 0 {
 		req.Page = 1
 	}
 	if req.PageSize <= 0 || req.PageSize > 100 {
 		req.PageSize = 10
 	}
-	return s.userRepo.List(req.Page, req.PageSize, req.Keyword)
+	users, total, err := s.userRepo.List(req.Page, req.PageSize, req.Keyword)
+	if err != nil {
+		return nil, 0, err
+	}
+	return ToUserResponses(users), total, nil
 }

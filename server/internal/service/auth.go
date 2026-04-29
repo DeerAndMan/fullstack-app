@@ -58,7 +58,7 @@ func (s *AuthService) Register(req *RegisterRequest) error {
 
 type LoginResponse struct {
 	Token *jwtpkg.TokenPair `json:"token"`
-	User  *model.User       `json:"user"`
+	User  *UserResponse     `json:"user"`
 }
 
 func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
@@ -81,7 +81,7 @@ func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 
 	return &LoginResponse{
 		Token: tokenPair,
-		User:  user,
+		User:  ToUserResponse(user),
 	}, nil
 }
 
