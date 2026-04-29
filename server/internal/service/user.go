@@ -45,6 +45,7 @@ type UserResponse struct {
 	Age         int    `json:"age"`
 	Email       string `json:"email"`
 	Description string `json:"description"`
+	Avatar      string `json:"avatar"`
 	Status      int8   `json:"status"`
 }
 
