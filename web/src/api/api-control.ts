@@ -1,18 +1,40 @@
 export const apiControl = {
-  user: {
+  auth: {
     login: "/api/v1/auth/login",
-    admin: "/admin/user",
+    register: "/api/v1/auth/register",
+    refreshToken: "/api/v1/auth/refresh-token",
+    logout: "/api/v1/auth/logout",
   },
-  enum: {
-    role: "/enum/role",
+  user: {
+    list: "/api/v1/users",
+    profile: "/api/v1/users/profile",
+    detail: "/api/v1/users",
   },
+  role: {
+    list: "/api/v1/roles",
+    all: "/api/v1/roles/all",
+    detail: "/api/v1/roles",
+  },
+  upload: "/api/v1/upload",
   trade: {
-    root: "/trade",
-    summary: "/trade/summary",
+    index: "/api/v1/trade/index",
+    summary: "/api/v1/trade/summary",
+  },
+  energy: {
+    insert: "/api/v1/energy/insert",
+  },
+  jyData: {
+    latest: "/api/v1/jydata/latest",
+    list: "/api/v1/jydata/list",
+  },
+  sse: {
+    chatMessages: "/api/v1/sse/chat-messages",
+  },
+  ai: {
+    conversations: "/api/v1/ai/conversations",
   },
   menu: {
     list: "/menu-router/list",
-    // action: "/menu-router",
     add: "/menu-router/add",
     roleRouting: "/menu-router/role-routing",
     roleListByRoleId: "/menu-router/role-routing/",

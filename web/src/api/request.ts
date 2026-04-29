@@ -56,7 +56,7 @@ request.interceptors.request.use((config: CustomRequestConfig) => {
   if (!config.noToken) {
     const { token } = useAuthStore.getState();
     if (token) {
-      config.headers.Authorization = token;
+      config.headers.Authorization = `Bearer ${token}`;
     }
   }
 

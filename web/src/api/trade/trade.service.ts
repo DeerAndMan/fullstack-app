@@ -10,7 +10,7 @@ import type { TradeParams } from "@/types/schema";
 export const getTrade = (params: TradeParams) =>
   RequestSchema({
     method: "POST",
-    url: apiControl.trade.root,
+    url: apiControl.trade.index,
     data: params,
     schema: z.array(TradeItemSchema),
   });

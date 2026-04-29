@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(go build *)",
-      "Bash(go get *)"
+      "Bash(go get *)",
+      "WebSearch",
+      "Bash(npx tsc *)",
+      "Bash(git checkout *)",
+      "Bash(go mod *)"
     ]
   }
 }
