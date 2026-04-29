@@ -15,7 +15,7 @@ type FieldType = {
 
 export const Login = () => {
   const navigator = useNavigate();
-  const { setToken, setUser } = useAuthStore();
+  const { setToken, setUser, setRole, setMenuRoles } = useAuthStore();
 
   const login = (data: FieldType) => {
     if (!data.username || !data.password) return;
@@ -26,6 +26,8 @@ export const Login = () => {
         if (res.code === 0 && res.data) {
           setToken(res.data.token.access_token);
           setUser(res.data.user);
+          setRole(res.data.role);
+          setMenuRoles(res.data.menuRoles);
           setAuthCookie(res.data.token.access_token);
           navigator("/", { replace: true });
         } else {

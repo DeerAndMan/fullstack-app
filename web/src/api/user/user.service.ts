@@ -3,16 +3,24 @@ import { apiControl, request } from "../";
 import type { AxiosRequestHeaders } from "axios";
 import type { PartialCustomRequestConfig, PromiseResponseData } from "../";
 import type { Account, AddAccount, Role } from "@/types/user";
+import type { MenuItemType } from "@/types/menu-router";
 
 export type LoginParams = {
   name: string;
   password: string;
 };
 
+export type LoginResponse = {
+  token: { access_token: string; refresh_token: string; expires_at: number };
+  user: Account;
+  role: Role;
+  menuRoles: MenuItemType[];
+};
+
 export const login = (
   params: LoginParams,
   other: PartialCustomRequestConfig
-): PromiseResponseData<{ token: { access_token: string; refresh_token: string; expires_at: string }; user: Account }> =>
+): PromiseResponseData<LoginResponse> =>
   request.post(apiControl.auth.login, params, { ...other });
 
 export const logout = (): PromiseResponseData => request.post(apiControl.auth.logout);

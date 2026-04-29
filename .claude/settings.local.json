@@ -9,7 +9,8 @@
       "Bash(go mod *)",
       "Bash(go test *)",
       "Bash(make *)",
-      "Bash(gofmt *)"
+      "Bash(gofmt *)",
+      "Bash(npm *)"
     ]
   }
 }
