@@ -62,14 +62,19 @@ fullstack-app/
 │   ├── cmd/server/main.go   # 后端入口和依赖注入
 │   ├── config/              # config.example.yaml + 本地 config.yaml
 │   ├── internal/            # handler/service/repository/model/router/middleware
-│   └── pkg/                 # errcode/jwt/response/upload
+│   └── pkg/                 # errcode/jwt/response/upload/snowflake
 ├── web/                     # React 前端
-│   ├── src/api/             # Axios、接口路径、请求类型
-│   ├── src/layouts/         # Layout/Nav
-│   ├── src/pages/           # 页面
-│   ├── src/router/          # 静态路由和导航菜单
-│   ├── src/stores/          # Zustand store
-│   └── src/types/           # TS 类型
+│   ├── src/api/             # Axios 实例、接口路径、Zod 校验请求、领域 API (user/trade/menu/subscribe/enum)
+│   ├── src/components/      # 通用组件 (chart/form/toast)
+│   ├── src/hooks/           # 自定义 hooks (useBoolean)
+│   ├── src/layouts/         # Layout 守卫 + Nav 导航
+│   ├── src/pages/           # 页面 (home/login/user/role/trade/subscribe/ws/ssr-demo)
+│   ├── src/router/          # 静态路由、懒加载、导航菜单、SPA/SSR 路由配置
+│   ├── src/sections/        # 页面子模块 (subscribe/user)
+│   ├── src/stores/          # Zustand store (auth/enum/global)
+│   ├── src/theme/           # Ant Design 主题和明暗切换
+│   ├── src/types/           # TS 类型、Zod schema、业务枚举
+│   └── src/utils/           # cookie、图片、RSA 加密、树转换、WebSocket
 ├── deploy/                  # 部署配置
 ├── docker-compose.yml       # 本地 MySQL/Redis
 └── Makefile                 # 顶层命令
@@ -78,13 +83,16 @@ fullstack-app/
 ## 前后端联动重点
 
 - API 基础路径由 `web/.env.*` 的 `VITE_WEB_BASE_URL` 控制。
-- 本地前端默认端口是 `6565`，后端实际端口以 `server/config/config.yaml` 为准。
-- 前端接口路径集中在 `web/src/api/api-control.ts`。
+- 本地前端默认端口是 `6565`，后端实际端口以 `server/config/config.yaml` 为准（默认 `6767`）。
+- 前端接口路径集中在 `web/src/api/api-control.ts`，所有路径已统一使用 `/api/v1` 前缀。
 - 后端接口统一挂在 `/api/v1`。
-- 统一响应格式是 `{"code": number, "data": any, "message"/"msg": string}`。
+- 统一响应格式是 `{"code": number, "data": any, "message": string}`，`code === 0` 表示成功。
+- 分页响应格式是 `{"code": 0, "data": {"list": [], "total": N, "page": N, "pageSize": N}, "message": "success"}`。
+- 前端分页类型 `PageData<T>` 定义在 `web/src/api/request.ts`，字段使用 camelCase（`pageSize` 而非 `page_size`）。
 - 登录接口返回 `token`、`user`、`role`、`menuRoles`。
 - 前端导航 `web/src/layouts/Nav.tsx` 使用 `role.role_key` 和 `menuRoles[].link_url` 过滤菜单。
 - `sys_menu.link_url` 必须和 `web/src/router/section/nav-router.ts` 中的 `path` 完全一致，否则非超管登录后不会显示对应菜单。
+- 前端请求层有两套：普通 Axios（`request.get/post`）和 Zod 校验版（`RequestSchema/RequestGet/RequestPost`），新接口优先使用 Zod 校验版。
 
 ## 开发约定
 

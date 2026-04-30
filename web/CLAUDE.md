@@ -11,13 +11,15 @@
 - React 19
 - TypeScript 5.8，严格模式开启
 - Vite 8 + `@vitejs/plugin-react-swc`
-- Ant Design 5
+- Ant Design 5 + @ant-design/charts 2
 - Tailwind CSS 4
 - Zustand 5
 - TanStack Query 5
 - React Router 7
 - Axios + axios-retry
-- Zod
+- Zod 4（接口响应校验）
+- ts-pattern 5（模式匹配）
+- node-forge（RSA 密码加密）
 - Express SSR 入口保留
 
 ## 常用命令
@@ -45,17 +47,32 @@ npm run test
 - `src/main.tsx` — CSR 入口
 - `src/App.tsx` — 应用根组件
 - `src/antd-context.tsx` — Ant Design 全局上下文
-- `src/api/` — Axios 实例、接口路径、请求类型和领域 API
-- `src/components/` — 通用组件
-- `src/hooks/` — 自定义 hooks 和 React Query hooks
+- `src/api/` — Axios 实例、接口路径、Zod 校验请求和领域 API
+  - `api-control.ts` — 所有接口路径常量（已统一 `/api/v1` 前缀）
+  - `request.ts` — Axios 实例 + 拦截器 + `ResponseData<T>` / `PageData<T>` 类型
+  - `request-schema.ts` — Zod 校验请求封装（`RequestSchema`/`RequestGet`/`RequestPost`/`RequestPut`/`RequestDelete`）
+  - `user/` — 用户/认证 API + TanStack Query hooks
+  - `trade/` — 交易数据 API + Query hooks
+  - `menu/` — 菜单管理 API + Query/Mutation hooks
+  - `subscribe/` — 订阅管理 API + Query hooks（home + detail）
+  - `enum/` — 枚举 API + Query hooks
+- `src/components/` — 通用组件 (chart: LineChart/DualAxesChart, form: FormWrap/FormItem, toast: Toastify)
+- `src/hooks/` — 自定义 hooks (useBoolean)
 - `src/layouts/` — 页面布局、登录守卫和顶部导航
-- `src/pages/` — 页面组件
-- `src/router/` — 路由注册、懒加载和导航菜单配置
-- `src/sections/` — 页面子模块
-- `src/stores/` — Zustand store
+- `src/pages/` — 页面组件 (home/login/user/role/trade/subscribe/ws/ssr-demo)
+- `src/router/` — 路由注册、懒加载、导航菜单、SPA/SSR 路由配置
+- `src/sections/` — 页面子模块 (subscribe: home table + detail, user: AddEditUserModal + AddEditUserRoleModal)
+- `src/stores/` — Zustand store (auth: 认证持久化, enum: 角色枚举, global: messageApi)
 - `src/theme/` — Ant Design 主题和明暗切换
-- `src/types/` — TypeScript 类型和业务枚举
-- `src/utils/` — cookie、图片、加密、树转换等工具
+- `src/types/` — TypeScript 类型、Zod schema、业务枚举
+  - `user.ts` — Account/Role/MenuRole 类型
+  - `menu-router.ts` — MenuItemType/TreeMenuItemType/RoleRoutingType
+  - `enum.ts` — RoleKey 枚举
+  - `schema.ts` — Zod schema (TradeItem/EnergyItem 等)
+  - `api.d.ts` — ApiResponse/PageResult/PageParams 通用类型
+  - `constants.ts` — Any/CallbackFunction 工具类型
+  - `xq/subscribe/home.ts` — 订阅相关 Zod schema
+- `src/utils/` — cookie、图片 base64、RSA 加密、树转换、WebSocket 封装
 - `server.ts`、`server/`、`src/ssr-entry.tsx` — SSR 相关入口
 
 ## API 与请求约定
@@ -63,12 +80,14 @@ npm run test
 - API baseURL 来自 `import.meta.env.VITE_WEB_BASE_URL`。
 - 本地开发配置在 `.env.development`，当前指向 `http://127.0.0.1:6767`。
 - 生产配置在 `.env.production`。
-- 接口路径集中维护在 `src/api/api-control.ts`。
+- 接口路径集中维护在 `src/api/api-control.ts`，所有路径已统一使用 `/api/v1` 前缀。
 - Axios 实例在 `src/api/request.ts`。
 - 请求默认带 `Authorization: Bearer <token>`；传 `noToken` 时不带 token。
-- 后端统一返回：`{ code, data, msg/message }`。
+- 后端统一返回：`{ code, data, message }`。
 - `code === 0` 表示成功；非 0 会被响应拦截器 reject。
 - `401/403` 或业务 token 错误码会清空认证状态。
+- 分页响应使用 `PageData<T>` 类型：`{ list: T[], total, page, pageSize }`，字段统一 camelCase。
+- 新接口优先使用 Zod 校验版请求函数（`RequestSchema`/`RequestGet`/`RequestPost`），定义在 `src/api/request-schema.ts`。
 
 ## 认证和导航
 
@@ -98,8 +117,12 @@ npm run test
 - 用户和角色类型在 `src/types/user.ts`。
 - 菜单权限类型在 `src/types/menu-router.ts`。
 - 角色枚举在 `src/types/enum.ts`。
+- 通用 API 类型（`ApiResponse`/`PageResult`/`PageParams`）在 `src/types/api.d.ts`。
+- 交易/持仓 Zod schema 在 `src/types/schema.ts`。
+- 订阅相关 Zod schema 在 `src/types/xq/subscribe/home.ts`。
 - 修改后端响应字段时，要同步更新 `src/api/*` 的返回类型和 `src/types/*`。
 - 当前 TypeScript 开启 `strict`、`noUnusedLocals`、`noUnusedParameters`、`noImplicitAny`，不要留下未使用变量或隐式 any。
+- 路径别名：`@/*` → `./src/*`，另有 `@api/*`、`@store/*`、`@components/*`、`@pages/*`、`@router/*`、`@types/*`、`@layouts/*`、`@utils/*`。
 
 ## 路由约定
 
@@ -123,4 +146,5 @@ npm run test
 - 不要把后端字段名改成前端自造字段；优先同步 TypeScript 类型适配真实接口。
 - 不要绕过 `src/api/request.ts` 直接创建新的 Axios 实例，除非确有独立 baseURL/拦截器需求。
 - 不要在登录页只保存 token/user；导航权限依赖 role/menuRoles。
-- `src/api/api-control.ts` 里还有部分旧接口路径没有 `/api/v1` 前缀，接入当前 Go 后端时要特别核对。
+- 前后端分页字段统一使用 camelCase（`pageSize`），不要用 `page_size`。
+- `src/utils/encrypted.ts` 中的 RSA 公钥用于密码加密传输，修改时需同步后端解密逻辑。

@@ -36,16 +36,17 @@ HTTP 绑定    业务逻辑     GORM 查询
 - `config/` — `config.yaml` (运行配置, gitignored) + `config.example.yaml` (模板)
 - `internal/config/` — Viper 配置结构体 + 加载器
 - `internal/database/` — MySQL (GORM) 和 Redis 连接初始化
-- `internal/handler/` — HTTP 处理器 (auth, user, role, upload, energy, trade, jy_data, sse, ai)
+- `internal/handler/` — HTTP 处理器 (auth, user, role, upload, energy, trade, jy_data, sse, ai, menu, enum, subscription, theme_content)
 - `internal/service/` — 业务逻辑层 + 请求/响应 DTO
-- `internal/repository/` — 数据访问层 (user, role, energy, jy_data 等)
+- `internal/repository/` — 数据访问层 (user, role, energy, jy_data, menu, subscription, theme_content)
 - `internal/model/` — GORM 数据库模型 (user, sys_role, sys_menu, sys_user_role, sys_menu_role, image, xq_subscription, xq_theme_content, energy, summary, jy_data)
 - `internal/middleware/` — RequestID, Recovery, CORS, Logger, JWT, Casbin
-- `internal/router/` — 顶层 Setup + `v1/` 子包 (按领域拆分路由注册)
+- `internal/router/` — 顶层 Setup + `v1/` 子包 (按领域拆分路由注册，共 14 个路由文件)
 - `pkg/errcode/` — 类型化错误码
 - `pkg/jwt/` — JWT 令牌管理器
 - `pkg/response/` — 统一 JSON 响应工具
 - `pkg/upload/` — 文件上传工具
+- `pkg/snowflake/` — 雪花 ID 生成器（用于菜单 ID）
 
 ## 常用命令
 
@@ -73,18 +74,26 @@ make swagger      # swag init -g cmd/server/main.go -o docs
 - `POST /api/v1/sse/chat-messages` — AI 对话 (SSE 流式)
 - `GET /api/v1/sse/chat-messages/:id` — 获取对话历史
 - `GET /api/v1/ai/conversations` — 获取会话列表
+- `GET /api/v1/enums/roles` — 角色枚举列表
+- `POST|DELETE|GET /api/v1/subscriptions` — 订阅 CRUD（含 toggle/exists/detail/detail-table）
+- `POST|PUT|DELETE|GET /api/v1/theme-contents` — 主题内容 CRUD（含 batch/search/timeline）
 
 **受保护接口**（需要 JWT Bearer）:
 - `POST /api/v1/auth/logout` — 登出
 - `GET|POST /api/v1/users` — 用户列表（分页、关键词搜索）/ 创建用户
 - `GET /api/v1/users/profile` — 当前用户信息
 - `GET|PUT|DELETE /api/v1/users/:id` — 用户 CRUD
+- `PUT /api/v1/users/:id/role` — 更新用户角色
+- `POST|GET /api/v1/users/:id/roles` — 批量分配 / 查询用户角色
 - `GET|POST /api/v1/roles` — 角色列表（分页）/ 创建角色
 - `GET /api/v1/roles/all` — 所有启用角色（不分页）
 - `GET|PUT|DELETE /api/v1/roles/:id` — 角色 CRUD
 - `POST /api/v1/upload` — 文件上传（multipart）
 - `POST /api/v1/trade/index` — 按日期范围查询交易汇总
 - `POST /api/v1/trade/summary` — 单日交易汇总详情
+- `GET|POST /api/v1/menus` — 菜单列表 / 批量添加
+- `POST /api/v1/menus/role-binding` — 角色-菜单绑定
+- `GET /api/v1/menus/role-binding/:roleId` — 按角色查菜单
 
 ## 数据库
 
@@ -109,16 +118,17 @@ ai:       # base_url, token (外部 AI 服务，Dify 风格 API)
 
 ## 编码规范
 
-- **错误码**: 按领域划分: 10xxx=认证, 20xxx=用户, 30xxx=角色, 40xxx=上传。0 表示成功。
+- **错误码**: 按领域划分: 10xxx=认证/用户, 20xxx=角色, 30xxx=菜单, 40xxx=订阅, 50xxx=主题内容。0 表示成功。
 - **响应**: 统一使用 `pkg/response/` 中的 `response.OK()`, `response.Fail()`, `response.OKWithPage()`
 - **请求 DTO**: 定义在 `internal/service/` 中，与 Service 方法放在一起
-- **命名**: Go 文件 snake_case，包名小写单词，JSON 字段 snake_case，YAML 配置键 snake_case
+- **命名**: Go 文件 snake_case，包名小写单词，JSON 字段 camelCase（如 `pageSize`），YAML 配置键 snake_case
 - **中间件栈**: 全局: RequestID → Recovery → CORS → Logger；JWT 仅用于受保护路由组
 - **参数校验**: 使用 `vd:` 标签（Hertz go-tagexpr），不要写独立的校验逻辑
 - **密码**: bcrypt 哈希，密码字段通过 `json:"-"` 标签对 JSON 隐藏。
 - **登录响应**: `auth/login` 返回 `token`、`user`、`role`、`menuRoles`；`menuRoles[].link_url` 需要和前端 `web/src/router/section/nav-router.ts` 的 `path` 对齐。
-- **分页**: 请求参数 `page` + `page_size`，响应包装为 `PageResult{list, total, page, page_size}`
+- **分页**: 请求参数 `page` + `pageSize`，响应包装为 `PageResult{list, total, page, pageSize}`
 - **路由注册**: 路由按领域拆分到 `internal/router/v1/` 子包，通过 `Handlers` 聚合结构体分发
+- **ID 生成**: 菜单等需要分布式 ID 的场景使用 `pkg/snowflake`
 
 ## 重要提醒
 
