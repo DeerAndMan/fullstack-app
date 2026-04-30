@@ -56,7 +56,7 @@ export const Operation = () => {
 
       <Table
         size="small"
-        dataSource={(queryList.data?.data || []).map(l => ({ ...l, key: l.id }))}
+        dataSource={(queryList.data?.data?.list || []).map(l => ({ ...l, key: l.id }))}
         columns={[
           { key: "id", title: "ID", dataIndex: "id" },
           {

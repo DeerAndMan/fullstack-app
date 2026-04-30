@@ -1,7 +1,7 @@
 import { apiControl, request } from "../";
 
 import type { AxiosRequestHeaders } from "axios";
-import type { PartialCustomRequestConfig, PromiseResponseData } from "../";
+import type { PageData, PartialCustomRequestConfig, PromiseResponseData } from "../";
 import type { Account, AddAccount, Role } from "@/types/user";
 import type { MenuItemType } from "@/types/menu-router";
 
@@ -25,7 +25,7 @@ export const login = (
 
 export const logout = (): PromiseResponseData => request.post(apiControl.auth.logout);
 
-export const getAllUser = (): PromiseResponseData<Account[]> => request.get(apiControl.user.list);
+export const getAllUser = (): PromiseResponseData<PageData<Account>> => request.get(apiControl.user.list);
 
 export const getProfile = (): PromiseResponseData<Account> => request.get(apiControl.user.profile);
 

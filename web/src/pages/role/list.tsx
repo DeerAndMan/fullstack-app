@@ -55,7 +55,7 @@ export default function list() {
         size="small"
         loading={queryList.isLoading}
         columns={columns}
-        dataSource={(queryList.data?.data || []).map(l => ({ ...l, key: l.id }))}
+        dataSource={(queryList.data?.data?.list || []).map(l => ({ ...l, key: l.id }))}
       />
     </div>
   );

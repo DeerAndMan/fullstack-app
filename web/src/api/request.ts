@@ -41,6 +41,13 @@ export type ResponseData<T = Any> = {
   message: string;
 };
 
+export type PageData<T> = {
+  list: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 axiosRetry(request, {
   retries: 3,
   retryDelay: (retryCount) => {

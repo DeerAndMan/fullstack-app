@@ -8,12 +8,12 @@ export interface PageResult<T> {
   list: T[];
   total: number;
   page: number;
-  page_size: number;
+  pageSize: number;
 }
 
 export interface PageParams {
   page: number;
-  page_size: number;
+  pageSize: number;
   keyword?: string;
 }
 
