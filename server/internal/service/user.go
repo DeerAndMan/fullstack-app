@@ -13,10 +13,11 @@ import (
 
 type UserService struct {
 	userRepo *repository.UserRepository
+	roleRepo *repository.RoleRepository
 }
 
-func NewUserService(userRepo *repository.UserRepository) *UserService {
-	return &UserService{userRepo: userRepo}
+func NewUserService(userRepo *repository.UserRepository, roleRepo *repository.RoleRepository) *UserService {
+	return &UserService{userRepo: userRepo, roleRepo: roleRepo}
 }
 
 type CreateUserRequest struct {
@@ -141,4 +142,97 @@ func (s *UserService) List(req *ListUserRequest) ([]UserResponse, int64, error) 
 		return nil, 0, err
 	}
 	return ToUserResponses(users), total, nil
+}
+
+type UpdateUserRoleRequest struct {
+	RoleID int64 `json:"role_id" vd:"$>0"`
+}
+
+type AssignUserRolesRequest struct {
+	RoleIDs []int64 `json:"role_ids" vd:"len($)>0"`
+}
+
+type UserRoleResponse struct {
+	RoleID   int64  `json:"role_id"`
+	RoleName string `json:"role_name"`
+	RoleKey  string `json:"role_key"`
+}
+
+func (s *UserService) UpdateRole(userID uint, req *UpdateUserRoleRequest) (*model.Role, error) {
+	if _, err := s.userRepo.GetByID(userID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errcode.ErrUserNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+
+	role, err := s.roleRepo.GetByID(uint(req.RoleID))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errcode.ErrRoleNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+	if role.RoleStatus != 0 {
+		return nil, errcode.ErrRoleDisabled
+	}
+
+	if err := s.userRepo.DeleteUserRoles(userID); err != nil {
+		return nil, errcode.ErrInternal
+	}
+	ur := &model.SysUserRole{UserID: int64(userID), RoleID: req.RoleID}
+	if err := s.userRepo.CreateUserRole(ur); err != nil {
+		return nil, errcode.ErrInternal
+	}
+	return role, nil
+}
+
+func (s *UserService) AssignRoles(userID uint, req *AssignUserRolesRequest) ([]model.Role, error) {
+	if _, err := s.userRepo.GetByID(userID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errcode.ErrUserNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+
+	var roles []model.Role
+	for _, rid := range req.RoleIDs {
+		role, err := s.roleRepo.GetByID(uint(rid))
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, errcode.ErrRoleInvalid
+			}
+			return nil, errcode.ErrInternal
+		}
+		if role.RoleStatus != 0 {
+			return nil, errcode.ErrRoleDisabled
+		}
+		roles = append(roles, *role)
+	}
+
+	if err := s.userRepo.DeleteUserRoles(userID); err != nil {
+		return nil, errcode.ErrInternal
+	}
+	urs := make([]model.SysUserRole, 0, len(req.RoleIDs))
+	for _, rid := range req.RoleIDs {
+		urs = append(urs, model.SysUserRole{UserID: int64(userID), RoleID: rid})
+	}
+	if err := s.userRepo.BatchCreateUserRoles(urs); err != nil {
+		return nil, errcode.ErrInternal
+	}
+	return roles, nil
+}
+
+func (s *UserService) GetRoles(userID uint) ([]model.Role, error) {
+	if _, err := s.userRepo.GetByID(userID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errcode.ErrUserNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+	roles, err := s.userRepo.GetUserRoles(userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+	return roles, nil
 }

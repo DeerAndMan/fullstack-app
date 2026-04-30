@@ -129,3 +129,75 @@ func (h *UserHandler) List(ctx context.Context, c *app.RequestContext) {
 
 	response.OKWithPage(ctx, c, users, total, req.Page, req.PageSize)
 }
+
+func (h *UserHandler) UpdateRole(ctx context.Context, c *app.RequestContext) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Fail(ctx, c, errcode.ErrBadRequest)
+		return
+	}
+
+	var req service.UpdateUserRoleRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		response.FailWithMessage(ctx, c, errcode.ErrBadRequest, err.Error())
+		return
+	}
+
+	role, err := h.userSvc.UpdateRole(uint(id), &req)
+	if err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			response.Fail(ctx, c, e)
+			return
+		}
+		response.Fail(ctx, c, errcode.ErrInternal)
+		return
+	}
+
+	response.OK(ctx, c, role)
+}
+
+func (h *UserHandler) AssignRoles(ctx context.Context, c *app.RequestContext) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Fail(ctx, c, errcode.ErrBadRequest)
+		return
+	}
+
+	var req service.AssignUserRolesRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		response.FailWithMessage(ctx, c, errcode.ErrBadRequest, err.Error())
+		return
+	}
+
+	roles, err := h.userSvc.AssignRoles(uint(id), &req)
+	if err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			response.Fail(ctx, c, e)
+			return
+		}
+		response.Fail(ctx, c, errcode.ErrInternal)
+		return
+	}
+
+	response.OK(ctx, c, roles)
+}
+
+func (h *UserHandler) GetRoles(ctx context.Context, c *app.RequestContext) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Fail(ctx, c, errcode.ErrBadRequest)
+		return
+	}
+
+	roles, err := h.userSvc.GetRoles(uint(id))
+	if err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			response.Fail(ctx, c, e)
+			return
+		}
+		response.Fail(ctx, c, errcode.ErrInternal)
+		return
+	}
+
+	response.OK(ctx, c, roles)
+}

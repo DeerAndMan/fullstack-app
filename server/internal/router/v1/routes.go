@@ -7,15 +7,19 @@ import (
 )
 
 type Handlers struct {
-	Auth   *handler.AuthHandler
-	User   *handler.UserHandler
-	Role   *handler.RoleHandler
-	Upload *handler.UploadHandler
-	Energy *handler.EnergyHandler
-	Trade  *handler.TradeHandler
-	JyData *handler.JyDataHandler
-	Sse    *handler.SseHandler
-	Ai     *handler.AiHandler
+	Auth         *handler.AuthHandler
+	User         *handler.UserHandler
+	Role         *handler.RoleHandler
+	Upload       *handler.UploadHandler
+	Energy       *handler.EnergyHandler
+	Trade        *handler.TradeHandler
+	JyData       *handler.JyDataHandler
+	Sse          *handler.SseHandler
+	Ai           *handler.AiHandler
+	Enum         *handler.EnumHandler
+	Menu         *handler.MenuHandler
+	Subscription *handler.SubscriptionHandler
+	ThemeContent *handler.ThemeContentHandler
 }
 
 func RegisterRoutes(public *route.RouterGroup, protected *route.RouterGroup, h *Handlers) {
@@ -28,4 +32,8 @@ func RegisterRoutes(public *route.RouterGroup, protected *route.RouterGroup, h *
 	registerJyDataRoutes(public, h.JyData)
 	registerSseRoutes(public, h.Sse)
 	registerAiRoutes(public, h.Ai)
+	registerEnumRoutes(public, h.Enum)
+	registerMenuRoutes(protected, h.Menu)
+	registerSubscriptionRoutes(public, h.Subscription)
+	registerThemeContentRoutes(public, h.ThemeContent)
 }

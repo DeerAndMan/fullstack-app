@@ -49,6 +49,30 @@ var (
 
 // 上传错误
 var (
-	ErrFileTooLarge  = New(40001, "文件过大", http.StatusBadRequest)
+	ErrFileTooLarge       = New(40001, "文件过大", http.StatusBadRequest)
 	ErrFileTypeNotAllowed = New(40002, "不支持的文件类型", http.StatusBadRequest)
+)
+
+// 菜单错误
+var (
+	ErrMenuNotFound  = New(50001, "菜单不存在", http.StatusNotFound)
+	ErrMenuDuplicate = New(50002, "菜单已存在", http.StatusBadRequest)
+)
+
+// 订阅错误
+var (
+	ErrSubscriptionNotFound  = New(60001, "订阅不存在", http.StatusNotFound)
+	ErrSubscriptionDuplicate = New(60002, "订阅已存在", http.StatusBadRequest)
+)
+
+// 主题内容错误
+var (
+	ErrThemeContentNotFound  = New(70001, "主题内容不存在", http.StatusNotFound)
+	ErrThemeContentDuplicate = New(70002, "主题内容已存在", http.StatusBadRequest)
+)
+
+// 用户角色错误
+var (
+	ErrRoleDisabled    = New(30004, "角色已被禁用", http.StatusBadRequest)
+	ErrRoleInvalid     = New(30005, "包含无效的角色", http.StatusBadRequest)
 )

@@ -108,3 +108,25 @@ func (r *UserRepository) GetMenusByRoleID(roleID int64) ([]model.Menu, error) {
 		Find(&menus).Error
 	return menus, err
 }
+
+func (r *UserRepository) DeleteUserRoles(userID uint) error {
+	return r.db.Where("user_id = ?", userID).Delete(&model.SysUserRole{}).Error
+}
+
+func (r *UserRepository) CreateUserRole(ur *model.SysUserRole) error {
+	return r.db.Create(ur).Error
+}
+
+func (r *UserRepository) BatchCreateUserRoles(urs []model.SysUserRole) error {
+	return r.db.Create(&urs).Error
+}
+
+func (r *UserRepository) GetUserRoles(userID uint) ([]model.Role, error) {
+	var roles []model.Role
+	err := r.db.Select("sys_role.*").
+		Joins("JOIN sys_user_role ON sys_role.role_id = sys_user_role.role_id").
+		Where("sys_user_role.user_id = ? AND sys_role.del_flag = 0", userID).
+		Order("sys_role.sort ASC, sys_role.role_id ASC").
+		Find(&roles).Error
+	return roles, err
+}

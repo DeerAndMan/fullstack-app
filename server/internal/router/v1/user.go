@@ -15,5 +15,8 @@ func registerUserRoutes(protected *route.RouterGroup, h *handler.UserHandler) {
 		users.GET("/:id", h.GetByID)
 		users.PUT("/:id", h.Update)
 		users.DELETE("/:id", h.Delete)
+		users.PUT("/:id/role", h.UpdateRole)
+		users.POST("/:id/roles", h.AssignRoles)
+		users.GET("/:id/roles", h.GetRoles)
 	}
 }

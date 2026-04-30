@@ -93,10 +93,13 @@ func main() {
 	roleRepo := repository.NewRoleRepository(db)
 	energyRepo := repository.NewEnergyRepository(db)
 	jyDataRepo := repository.NewJyDataRepository(db)
+	menuRepo := repository.NewMenuRepository(db)
+	subRepo := repository.NewSubscriptionRepository(db)
+	tcRepo := repository.NewThemeContentRepository(db)
 
 	// Service
 	authSvc := service.NewAuthService(userRepo, jwtManager)
-	userSvc := service.NewUserService(userRepo)
+	userSvc := service.NewUserService(userRepo, roleRepo)
 	roleSvc := service.NewRoleService(roleRepo)
 	uploadSvc := service.NewUploadService(uploader)
 	energySvc := service.NewEnergyService(energyRepo)
@@ -104,18 +107,25 @@ func main() {
 	jyDataSvc := service.NewJyDataService(jyDataRepo)
 	sseSvc := service.NewSseService(cfg.AI.BaseURL, cfg.AI.Token)
 	aiSvc := service.NewAiService(cfg.AI.BaseURL, cfg.AI.Token)
+	menuSvc := service.NewMenuService(menuRepo)
+	subSvc := service.NewSubscriptionService(subRepo, tcRepo)
+	tcSvc := service.NewThemeContentService(tcRepo, subSvc)
 
 	// Handler
 	handlers := &v1.Handlers{
-		Auth:   handler.NewAuthHandler(authSvc),
-		User:   handler.NewUserHandler(userSvc),
-		Role:   handler.NewRoleHandler(roleSvc),
-		Upload: handler.NewUploadHandler(uploadSvc),
-		Energy: handler.NewEnergyHandler(energySvc),
-		Trade:  handler.NewTradeHandler(tradeSvc),
-		JyData: handler.NewJyDataHandler(jyDataSvc),
-		Sse:    handler.NewSseHandler(sseSvc),
-		Ai:     handler.NewAiHandler(aiSvc),
+		Auth:         handler.NewAuthHandler(authSvc),
+		User:         handler.NewUserHandler(userSvc),
+		Role:         handler.NewRoleHandler(roleSvc),
+		Upload:       handler.NewUploadHandler(uploadSvc),
+		Energy:       handler.NewEnergyHandler(energySvc),
+		Trade:        handler.NewTradeHandler(tradeSvc),
+		JyData:       handler.NewJyDataHandler(jyDataSvc),
+		Sse:          handler.NewSseHandler(sseSvc),
+		Ai:           handler.NewAiHandler(aiSvc),
+		Enum:         handler.NewEnumHandler(roleSvc),
+		Menu:         handler.NewMenuHandler(menuSvc),
+		Subscription: handler.NewSubscriptionHandler(subSvc),
+		ThemeContent: handler.NewThemeContentHandler(tcSvc),
 	}
 
 	// Hertz server
