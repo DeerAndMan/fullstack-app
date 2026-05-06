@@ -10,5 +10,6 @@ func registerEnergyRoutes(public *route.RouterGroup, h *handler.EnergyHandler) {
 	energy := public.Group("/energy")
 	{
 		energy.POST("/insert", h.InsertAssets)
+		energy.POST("/asset", h.InsertAssets)
 	}
 }

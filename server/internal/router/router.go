@@ -1,13 +1,10 @@
 package router
 
 import (
-	"context"
-
 	"fullstack-app/server/internal/middleware"
 	v1 "fullstack-app/server/internal/router/v1"
 	jwtpkg "fullstack-app/server/pkg/jwt"
 
-	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 )
 
@@ -19,9 +16,7 @@ func Setup(h *server.Hertz, v1Handlers *v1.Handlers, jwtManager *jwtpkg.Manager,
 		middleware.Logger(),
 	)
 
-	h.GET("/health", func(ctx context.Context, c *app.RequestContext) {
-		c.JSON(200, map[string]string{"status": "ok"})
-	})
+	RegisterPublicRoutes(h, v1Handlers)
 
 	// --- v1 ---
 	apiV1 := h.Group("/api/v1")    // 公开组，无 JWT
