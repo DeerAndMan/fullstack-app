@@ -20,9 +20,7 @@ export default function list() {
       title: "头像",
       dataIndex: "avatar",
       key: "avatar",
-      render: (value: string) => (
-        <Avatar alt="用户头像" icon={<UserOutlined />} src={base64ToImg(value)} />
-      ),
+      render: (value: string) => <Avatar alt="用户头像" icon={<UserOutlined />} src={base64ToImg(value)} />,
     },
     { title: "账号", dataIndex: "name", key: "name" },
     { title: "年龄", dataIndex: "age", key: "age" },
