@@ -14,9 +14,9 @@ import (
 )
 
 func NewMySQL(cfg *config.MySQLConfig, serverMode string) (*gorm.DB, error) {
-	logLevel := logger.Info
+	logLevel := logger.Warn
 	if serverMode == "release" {
-		logLevel = logger.Warn
+		logLevel = logger.Error
 	}
 	if cfg.Host == "" {
 		return nil, fmt.Errorf("mysql host is required")
