@@ -41,7 +41,9 @@ HTTP 绑定    业务逻辑     GORM 查询
 - `internal/repository/` — 数据访问层 (user, role, energy, jy_data, menu, subscription, theme_content)
 - `internal/model/` — GORM 数据库模型 (user, sys_role, sys_menu, sys_user_role, sys_menu_role, image, xq_subscription, xq_theme_content, energy, summary, jy_data)
 - `internal/middleware/` — RequestID, Recovery, CORS, Logger, JWT, Casbin
-- `internal/router/` — 顶层 Setup + `v1/` 子包 (按领域拆分路由注册，共 14 个路由文件)
+- `internal/router/` — 顶层 Setup + `v1/` 子包 (14 个路由文件) + `v2/` 子包 (测试接口)
+  - `registrar.go` — 定义 `Registrar` 接口，各版本 Handlers 实现该接口自行注册路由
+  - `public.go` — 无版本前缀的公共路由（`/health`、`/energy/asset` 油猴脚本直连）
 - `pkg/errcode/` — 类型化错误码
 - `pkg/jwt/` — JWT 令牌管理器
 - `pkg/response/` — 统一 JSON 响应工具
@@ -118,6 +120,7 @@ ai:       # base_url, token (外部 AI 服务，Dify 风格 API)
 
 ## 编码规范
 
+- **注释**: 所有代码注释必须使用中文。
 - **错误码**: 按领域划分: 10xxx=认证/用户, 20xxx=角色, 30xxx=菜单, 40xxx=订阅, 50xxx=主题内容。0 表示成功。
 - **响应**: 统一使用 `pkg/response/` 中的 `response.OK()`, `response.Fail()`, `response.OKWithPage()`
 - **请求 DTO**: 定义在 `internal/service/` 中，与 Service 方法放在一起
@@ -127,7 +130,7 @@ ai:       # base_url, token (外部 AI 服务，Dify 风格 API)
 - **密码**: bcrypt 哈希，密码字段通过 `json:"-"` 标签对 JSON 隐藏。
 - **登录响应**: `auth/login` 返回 `token`、`user`、`role`、`menuRoles`；`menuRoles[].link_url` 需要和前端 `web/src/router/section/nav-router.ts` 的 `path` 对齐。
 - **分页**: 请求参数 `page` + `pageSize`，响应包装为 `PageResult{list, total, page, pageSize}`
-- **路由注册**: 路由按领域拆分到 `internal/router/v1/` 子包，通过 `Handlers` 聚合结构体分发
+- **路由注册**: 各版本 Handlers 实现 `Registrar` 接口，在 `Register` 方法中自行创建路由组并注册路由。`router.Setup` 中逐个调用各版本的 `Register`。新增版本时创建 `internal/router/vN/` 包并实现接口即可。
 - **ID 生成**: 菜单等需要分布式 ID 的场景使用 `pkg/snowflake`
 
 ## 重要提醒

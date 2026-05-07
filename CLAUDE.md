@@ -28,8 +28,8 @@ make clean          # 清理构建产物
 
 ```bash
 make -C server test         # 后端测试
-npm --prefix web run build  # 前端类型检查 + 生产构建
-npm --prefix web run dev    # 前端 Vite 开发服务，端口 6565
+pnpm --prefix web build     # 前端类型检查 + 生产构建
+pnpm --prefix web dev       # 前端 Vite 开发服务，端口 6565
 ```
 
 ## 技术栈
@@ -85,7 +85,7 @@ fullstack-app/
 - API 基础路径由 `web/.env.*` 的 `VITE_WEB_BASE_URL` 控制。
 - 本地前端默认端口是 `6565`，后端实际端口以 `server/config/config.yaml` 为准（默认 `6767`）。
 - 前端接口路径集中在 `web/src/api/api-control.ts`，所有路径已统一使用 `/api/v1` 前缀。
-- 后端接口统一挂在 `/api/v1`。
+- 后端接口统一挂在 `/api/v1`，v2 接口挂在 `/api/v2`（当前仅有测试端点）。
 - 统一响应格式是 `{"code": number, "data": any, "message": string}`，`code === 0` 表示成功。
 - 分页响应格式是 `{"code": 0, "data": {"list": [], "total": N, "page": N, "pageSize": N}, "message": "success"}`。
 - 前端分页类型 `PageData<T>` 定义在 `web/src/api/request.ts`，字段使用 camelCase（`pageSize` 而非 `page_size`）。
@@ -101,8 +101,10 @@ fullstack-app/
 - 不要把旧 Gin 项目的代码直接迁移进当前后端；旧项目只能作为数据库模型和业务逻辑参考。
 - 后端密码字段必须保持 `json:"-"`，避免接口泄露 bcrypt hash。
 - 数据库模型以当前 MySQL 表结构为准，参考旧项目 `/Users/tuliuxiang/Desktop/GITFilter/golang/gin/dal/modal` 时要保留当前服务的安全差异。
-- 修改前端 UI 后，优先运行 `npm --prefix web run build`，必要时启动开发服务手动验证。
+- 修改前端 UI 后，优先运行 `pnpm --prefix web build`，必要时启动开发服务手动验证。
 - 修改后端后，优先运行 `make -C server test`。
+- 所有代码注释使用中文。
+- 前端包管理器为 pnpm，不要使用 npm 或 yarn。
 
 ## 注意事项
 
@@ -110,3 +112,15 @@ fullstack-app/
 - 不要把 `.env`、`config.yaml`、密钥、数据库密码等敏感文件提交。
 - `server/config/config.yaml` 被 gitignore，本地运行前需要从 `config.example.yaml` 复制。
 - AutoMigrate 只做兼容性迁移，不会删除旧字段；涉及缩短字段长度时要先检查线上数据长度。
+
+## 部署
+
+- 本地开发: `docker-compose.yml` 提供 MySQL 8.0 (3306) + Redis 7 (6379)
+- 生产部署: `deploy/docker-compose.prod.yml`，包含 4 个服务:
+  - web (nginx, 端口 80)
+  - server (Go, 端口 8080，依赖 MySQL 健康检查)
+  - mysql
+  - redis
+- 生产环境后端端口为 8080（非开发环境的 6767）
+- Dockerfile 位于 `deploy/docker/`（Dockerfile.server、Dockerfile.web）
+- Nginx 配置: `deploy/docker/nginx.conf`

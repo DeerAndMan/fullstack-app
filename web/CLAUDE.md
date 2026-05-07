@@ -20,26 +20,29 @@
 - Zod 4（接口响应校验）
 - ts-pattern 5（模式匹配）
 - node-forge（RSA 密码加密）
+- decimal.js（精确数值计算）
+- dayjs（日期处理）
 - Express SSR 入口保留
+- 包管理器: **pnpm**（锁文件为 `pnpm-lock.yaml`）
 
 ## 常用命令
 
 ```bash
-npm --prefix web run dev        # 启动 Vite 开发服务，默认端口 6565
-npm --prefix web run build      # TypeScript 构建检查 + Vite 生产构建
-npm --prefix web run lint       # ESLint
-npm --prefix web run test       # Vitest
-npm --prefix web run dev:ssr    # SSR 开发模式
-npm --prefix web run build:ssr  # SSR 构建
+pnpm --prefix web dev        # 启动 Vite 开发服务，默认端口 6565
+pnpm --prefix web build      # TypeScript 构建检查 + Vite 生产构建
+pnpm --prefix web lint       # ESLint
+pnpm --prefix web test       # Vitest
+pnpm --prefix web dev:ssr    # SSR 开发模式
+pnpm --prefix web build:ssr  # SSR 构建
 ```
 
 如果已经在 `web/` 目录内：
 
 ```bash
-npm run dev
-npm run build
-npm run lint
-npm run test
+pnpm dev
+pnpm build
+pnpm lint
+pnpm test
 ```
 
 ## 目录结构
@@ -56,12 +59,15 @@ npm run test
   - `menu/` — 菜单管理 API + Query/Mutation hooks
   - `subscribe/` — 订阅管理 API + Query hooks（home + detail）
   - `enum/` — 枚举 API + Query hooks
-- `src/components/` — 通用组件 (chart: LineChart/DualAxesChart, form: FormWrap/FormItem, toast: Toastify)
+- `src/components/` — 通用组件 (chart: LineChart/DualAxesChart, form: FormWrap/FormItem, toast: Toastify, query: QueryProvider)
 - `src/hooks/` — 自定义 hooks (useBoolean)
 - `src/layouts/` — 页面布局、登录守卫和顶部导航
 - `src/pages/` — 页面组件 (home/login/user/role/trade/subscribe/ws/ssr-demo)
+  - `role/` — 角色列表 (list.tsx) + 角色菜单绑定 (Menu.tsx)
+  - `subscribe/` — 首页 (home) + 详情 (detail) + 列表 (list)
+  - `user/` — 用户管理 + 菜单设置 (MenuSetting)
 - `src/router/` — 路由注册、懒加载、导航菜单、SPA/SSR 路由配置
-- `src/sections/` — 页面子模块 (subscribe: home table + detail, user: AddEditUserModal + AddEditUserRoleModal)
+- `src/sections/` — 页面子模块 (subscribe: home table + detail, user: AddEditUserModal + AddEditUserRoleModal, tree: utils)
 - `src/stores/` — Zustand store (auth: 认证持久化, enum: 角色枚举, global: messageApi)
 - `src/theme/` — Ant Design 主题和明暗切换
 - `src/types/` — TypeScript 类型、Zod schema、业务枚举
@@ -69,10 +75,12 @@ npm run test
   - `menu-router.ts` — MenuItemType/TreeMenuItemType/RoleRoutingType
   - `enum.ts` — RoleKey 枚举
   - `schema.ts` — Zod schema (TradeItem/EnergyItem 等)
+  - `schema-fixed.ts` — 修正版 Zod schema
   - `api.d.ts` — ApiResponse/PageResult/PageParams 通用类型
   - `constants.ts` — Any/CallbackFunction 工具类型
+  - `global.d.ts` — 全局类型声明
   - `xq/subscribe/home.ts` — 订阅相关 Zod schema
-- `src/utils/` — cookie、图片 base64、RSA 加密、树转换、WebSocket 封装
+- `src/utils/` — cookie、debugger、图片 base64、RSA 加密、树转换、WebSocket 封装
 - `server.ts`、`server/`、`src/ssr-entry.tsx` — SSR 相关入口
 
 ## API 与请求约定
