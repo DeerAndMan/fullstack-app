@@ -2,7 +2,10 @@ package v1
 
 import (
 	"fullstack-app/server/internal/handler"
+	"fullstack-app/server/internal/middleware"
+	jwtpkg "fullstack-app/server/pkg/jwt"
 
+	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/route"
 )
 
@@ -20,6 +23,13 @@ type Handlers struct {
 	Menu         *handler.MenuHandler
 	Subscription *handler.SubscriptionHandler
 	ThemeContent *handler.ThemeContentHandler
+}
+
+func (h *Handlers) Register(srv *server.Hertz, jwtManager *jwtpkg.Manager) {
+	apiV1 := srv.Group("/api/v1")
+	protectedV1 := apiV1.Group("")
+	protectedV1.Use(middleware.JWTAuth(jwtManager))
+	RegisterRoutes(apiV1, protectedV1, h)
 }
 
 func RegisterRoutes(public *route.RouterGroup, protected *route.RouterGroup, h *Handlers) {

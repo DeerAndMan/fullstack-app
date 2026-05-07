@@ -3,12 +3,13 @@ package router
 import (
 	"fullstack-app/server/internal/middleware"
 	v1 "fullstack-app/server/internal/router/v1"
+	v2 "fullstack-app/server/internal/router/v2"
 	jwtpkg "fullstack-app/server/pkg/jwt"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 )
 
-func Setup(h *server.Hertz, v1Handlers *v1.Handlers, jwtManager *jwtpkg.Manager, allowOrigins []string) {
+func Setup(h *server.Hertz, jwtManager *jwtpkg.Manager, allowOrigins []string, v1Handlers *v1.Handlers, v2Handlers *v2.Handlers) {
 	h.Use(
 		middleware.RequestID(),
 		middleware.Recovery(),
@@ -16,17 +17,9 @@ func Setup(h *server.Hertz, v1Handlers *v1.Handlers, jwtManager *jwtpkg.Manager,
 		middleware.Logger(),
 	)
 
+	// 公共路由(无版本前缀)
 	RegisterPublicRoutes(h, v1Handlers)
 
-	// --- v1 ---
-	apiV1 := h.Group("/api/v1")    // 公开组，无 JWT
-	protectedV1 := apiV1.Group("") // 受保护组，带 JWT
-	protectedV1.Use(middleware.JWTAuth(jwtManager))
-	v1.RegisterRoutes(apiV1, protectedV1, v1Handlers)
-
-	// --- v2 ---
-	// apiV2 := h.Group("/api/v2")
-	// protectedV2 := apiV2.Group("")
-	// protectedV2.Use(middleware.JWTAuth(jwtManager))
-	// v2.RegisterRoutes(apiV2, protectedV2, v2Handlers)
+	v1Handlers.Register(h, jwtManager)
+	v2Handlers.Register(h, jwtManager)
 }

@@ -11,6 +11,7 @@ import (
 	"fullstack-app/server/internal/repository"
 	"fullstack-app/server/internal/router"
 	v1 "fullstack-app/server/internal/router/v1"
+	v2 "fullstack-app/server/internal/router/v2"
 	"fullstack-app/server/internal/service"
 	jwtpkg "fullstack-app/server/pkg/jwt"
 	"fullstack-app/server/pkg/upload"
@@ -128,6 +129,11 @@ func main() {
 		ThemeContent: handler.NewThemeContentHandler(tcSvc),
 	}
 
+	// v2 Handlers
+	handlersV2 := &v2.Handlers{
+		Test: handler.NewTestHandlerV2(),
+	}
+
 	// Hertz server
 	h := server.Default(
 		server.WithHostPorts(fmt.Sprintf("0.0.0.0:%d", cfg.Server.Port)),
@@ -135,7 +141,7 @@ func main() {
 	)
 
 	// Routes
-	router.Setup(h, handlers, jwtManager, cfg.CORS.AllowOrigins)
+	router.Setup(h, jwtManager, cfg.CORS.AllowOrigins, handlers, handlersV2)
 
 	// Startup banner
 	fmt.Println()
