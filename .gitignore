@@ -6,6 +6,7 @@ vendor/
 dist/
 bin/
 tmp/
+server/server
 
 # Environment
 .env
