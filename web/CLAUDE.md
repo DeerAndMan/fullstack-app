@@ -149,6 +149,104 @@ pnpm test
 - 修改 UI 后应启动开发服务在浏览器验证关键路径；无法手动验证时要明确说明。
 - 头像由后端返回 base64，前端通过 `src/utils/img.ts` 转为可显示图片。
 
+## 主题系统
+
+- 主题切换基于 React Context (`src/theme/antd-context.tsx`)，提供 `ThemeProvider` 和 `useTheme` hook。
+- 支持 `light` / `dark` 两种模式，持久化到 `localStorage("theme")`。
+- 切换时同步更新 `document.body.className` 和 CSS 变量（`--app-color-primary`、`--app-color-bg-base` 等）。
+- Ant Design 的 `ConfigProvider` 根据主题切换 `lightTheme` / `darkTheme` 配置（定义在 `src/theme/antd-theme.ts`）。
+- 全局 locale 固定为 `zhCN`，dayjs 也加载了 `zh-cn`。
+- 主题切换组件: `src/theme/theme-switch.tsx`（Switch 组件，🌙/☀️ 图标）。
+
+## 路由路径常量
+
+路由路径集中定义在 `src/router/section/router-path.ts`：
+
+```typescript
+ROUTER_PATH = {
+  login: "/login",
+  home: "/",
+  data: "/data",
+  ws: "/ws",
+  subscribe: { home, list, detail: "/subscribe/detail/:id/:userId" },
+  role: { list: "/role/list", menu: "/role/menu" },
+  user: { root: "/user", operation: "/user/operation" },
+}
+```
+
+页面组件中引用路径时应使用此常量，避免硬编码字符串。
+
+## Sections 模块详情
+
+`src/sections/` 存放页面级别的子模块组件，按业务域组织：
+
+- `subscribe/home/table.tsx` — 订阅首页表格组件
+- `subscribe/home/operable-dialog.tsx` — 订阅操作弹窗
+- `subscribe/detail/index.tsx` — 订阅详情子模块
+- `user/AddEditUserModal.tsx` — 用户新增/编辑弹窗
+- `user/AddEditUserRoleModal.tsx` — 用户角色分配弹窗
+- `tree/utils.ts` — 树形数据处理工具函数
+
+Sections 和 Pages 的区别：Pages 是路由级组件，Sections 是 Pages 内部的可复用子模块。
+
+## SSR 架构
+
+项目保留了 Express 5 + Vite SSR 的完整入口：
+
+- `server.ts` — Express SSR 服务入口（开发模式使用 Vite middleware，生产模式读取构建产物）
+- `src/ssr-entry.tsx` — SSR 渲染入口（`renderToString`）
+- `src/ssr-context.tsx` — SSR 数据注入上下文
+- `src/router/section/ssr-routes.ts` — SSR 专用路由配置
+- `src/pages/ssr-demo/` — SSR 演示页面（基础、性能测试、数据获取）
+
+SSR 构建命令：`pnpm build:ssr`（分别构建 client 和 server 产物到 `dist/`）。
+
+当前主要使用 CSR 模式，SSR 仅作为技术演示保留。
+
+## Axios 拦截器细节
+
+请求拦截器支持的自定义配置项（`CustomRequestConfig`）：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `noToken` | `boolean` | 不附加 Authorization header |
+| `errorMsg` | `boolean \| string` | 错误时是否/如何显示 message（默认 true） |
+| `successMsg` | `boolean \| string` | 成功时是否/如何显示 message |
+| `saltLength` | `number` | 设置 `SaltLength` 请求头（RSA 加密相关） |
+| `needRetry` | `boolean` | 500 错误时是否重试（最多 3 次，间隔递增） |
+| `schema` | `z.ZodSchema` | Zod 响应校验 schema |
+| `schemaType` | `"base" \| "table"` | schema 包装类型（table 会自动包装分页结构） |
+
+响应拦截器行为：
+- 检测 `x-new-token` header 自动刷新 token（静默续期）。
+- `code === 0` 成功；非 0 reject 并可选显示错误消息。
+- `tokenErrList` (401, 10002, 10003) 触发清空认证状态。
+- HTTP 状态码 401/403 同样触发清空认证。
+- Blob 响应直接透传，不做 code 判断。
+
+## 导航菜单结构
+
+`nav-router.ts` 定义的完整导航树：
+
+```
+首页 (/)
+数据 (/data)
+ws (/ws)
+SSR Demo
+  ├── 基础演示 (/ssr)
+  ├── 性能测试 (/ssr/performance)
+  └── 数据获取 (/ssr/data-fetch)
+订阅
+  ├── 订阅首页 (/subscribe)
+  └── 订阅列表 (/subscribe/list)
+管理
+  └── 菜单
+  │   └── 角色菜单管理 (/role/menu)
+  └── 权限列表 (/role/list)
+```
+
+注意：`/subscribe/detail/:id/:userId` 和 `/user`、`/user/operation` 不在导航中显示，通过页面内链接跳转。
+
 ## 注意事项
 
 - 不要把后端字段名改成前端自造字段；优先同步 TypeScript 类型适配真实接口。
@@ -156,3 +254,6 @@ pnpm test
 - 不要在登录页只保存 token/user；导航权限依赖 role/menuRoles。
 - 前后端分页字段统一使用 camelCase（`pageSize`），不要用 `page_size`。
 - `src/utils/encrypted.ts` 中的 RSA 公钥用于密码加密传输，修改时需同步后端解密逻辑。
+- 主题切换状态独立于认证状态，不会因登出而重置。
+- `src/api/auth.ts` 是旧的认证 API 文件，当前认证逻辑已迁移到 `src/api/user/` 模块。
+- Zod 校验版请求在 schema 验证失败时会 `console.warn` 并 throw，开发时注意控制台警告。
