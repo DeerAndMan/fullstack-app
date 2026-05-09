@@ -3,7 +3,8 @@ tmp_dir = "tmp"
 
 [build]
   bin = "tmp/server"
-  cmd = "go build -o tmp/server cmd/server/main.go"
+  # 必须使用包路径而非单文件，否则同包下其他文件（如 wire.go）不会被编译
+  cmd = "go build -o tmp/server ./cmd/server/"
   delay = 1000
   exclude_dir = ["tmp", "vendor", "docs", "uploads"]
   exclude_regex = ["_test\\.go$"]
