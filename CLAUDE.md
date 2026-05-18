@@ -56,28 +56,17 @@ pnpm --prefix web dev       # 前端 Vite 开发服务，端口 6565
 
 ## 项目结构
 
+仅顶层视图，子目录详情见各自 `CLAUDE.md`。
+
 ```text
 fullstack-app/
-├── server/                  # Go 后端
-│   ├── cmd/server/main.go   # 后端入口和依赖注入
-│   ├── config/              # config.example.yaml + 本地 config.yaml
-│   ├── internal/            # handler/service/repository/model/router/middleware
-│   └── pkg/                 # errcode/jwt/response/upload/snowflake
-├── web/                     # React 前端
-│   ├── src/api/             # Axios 实例、接口路径、Zod 校验请求、领域 API (user/trade/menu/subscribe/enum)
-│   ├── src/components/      # 通用组件 (chart/form/toast)
-│   ├── src/hooks/           # 自定义 hooks (useBoolean)
-│   ├── src/layouts/         # Layout 守卫 + Nav 导航
-│   ├── src/pages/           # 页面 (home/login/user/role/trade/subscribe/ws/ssr-demo)
-│   ├── src/router/          # 静态路由、懒加载、导航菜单、SPA/SSR 路由配置
-│   ├── src/sections/        # 页面子模块 (subscribe/user)
-│   ├── src/stores/          # Zustand store (auth/enum/global)
-│   ├── src/theme/           # Ant Design 主题和明暗切换
-│   ├── src/types/           # TS 类型、Zod schema、业务枚举
-│   └── src/utils/           # cookie、图片、RSA 加密、树转换、WebSocket
-├── deploy/                  # 部署配置
-├── docker-compose.yml       # 本地 MySQL/Redis
-└── Makefile                 # 顶层命令
+├── server/              # Go 后端服务，详见 server/CLAUDE.md
+├── web/                 # React 前端应用，详见 web/CLAUDE.md
+├── deploy/              # 生产部署：docker-compose.prod.yml + Dockerfile.server/web + nginx.conf
+├── docs/                # 技术文档（gin / go / mysql / redis / RBAC / 云部署 等）
+├── docker-compose.yml   # 本地开发依赖：MySQL 8.0 + Redis 7
+├── Makefile             # 顶层命令入口
+└── README.md            # 项目说明（含英文版 README.en.md）
 ```
 
 ## 前后端联动重点

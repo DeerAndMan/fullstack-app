@@ -32,23 +32,58 @@ HTTP 绑定    业务逻辑     GORM 查询
 
 ### 目录结构
 
-- `cmd/server/main.go` — 入口文件，依赖注入组装
-- `config/` — `config.yaml` (运行配置, gitignored) + `config.example.yaml` (模板)
-- `internal/config/` — Viper 配置结构体 + 加载器
-- `internal/database/` — MySQL (GORM) 和 Redis 连接初始化
-- `internal/handler/` — HTTP 处理器 (auth, user, role, upload, energy, trade, jy_data, sse, ai, menu, enum, subscription, theme_content)
-- `internal/service/` — 业务逻辑层 + 请求/响应 DTO
-- `internal/repository/` — 数据访问层 (user, role, energy, jy_data, menu, subscription, theme_content)
-- `internal/model/` — GORM 数据库模型 (user, sys_role, sys_menu, sys_user_role, sys_menu_role, image, xq_subscription, xq_theme_content, energy, summary, jy_data)
-- `internal/middleware/` — RequestID, Recovery, CORS, Logger, JWT, Casbin
-- `internal/router/` — 顶层 Setup + `v1/` 子包 (14 个路由文件) + `v2/` 子包 (测试接口)
+`internal/` 一句话定位速查（详细约定见各子目录下的 `CLAUDE.md`）：
+
+| 目录          | 一句话定位                                            |
+| ------------- | ----------------------------------------------------- |
+| `config/`     | Viper 配置结构体与加载器，只解析不写业务              |
+| `database/`   | MySQL / Redis 连接初始化与 AutoMigrate 注册           |
+| `handler/`    | HTTP 处理层，只做绑定 / 校验 / 响应封装               |
+| `service/`    | 业务逻辑层 + 请求 / 响应 DTO，含 `ws_hub` WebSocket 枢纽 |
+| `repository/` | 数据访问层，Service 唯一访问 DB 的入口                |
+| `model/`      | GORM 实体，纯表结构、不含业务方法                     |
+| `middleware/` | Hertz 横切中间件，注明挂载顺序与 Casbin 未启用        |
+| `router/`     | 路由注册中心，`Registrar` 接口 + v1/v2 分版           |
+
+顶层：
+
+```text
+server/
+├── cmd/server/          # 程序入口：main.go 启动 Hertz，wire.go 手动装配依赖
+├── config/              # 运行时配置：config.yaml（gitignored）+ config.example.yaml（模板）
+├── migrations/          # 数据库迁移 SQL（AutoMigrate 之外的手动结构变更）
+├── internal/            # 业务代码（仅本项目可见，禁止外部引用）
+└── pkg/                 # 通用工具包（项目内复用，理论上可独立导出）
+```
+
+`internal/` 分层：
+
+- `config/` — Viper 配置结构体 + 加载器（读取 YAML、支持 `APP_` 前缀环境变量覆盖）
+- `database/` — MySQL（GORM）和 Redis 连接初始化与生命周期管理
+- `handler/` — HTTP 处理层，仅做参数绑定/校验和响应封装，不放业务逻辑
+  - 业务：`auth` / `user` / `role` / `menu` / `upload` / `enum`
+  - 数据：`trade` / `jy_data` / `energy` / `subscription` / `theme_content`
+  - 实时/AI：`sse`（AI 流式对话）/ `ai`（会话历史）/ `ws_v2`（WebSocket，挂在 v2）
+  - 其他：`test_v2`（v2 测试端点）
+- `service/` — 业务逻辑层 + 请求/响应 DTO，与 handler 文件一一对应
+  - `ws_hub.go` — WebSocket 连接池和广播枢纽（被 `ws_v2` handler 使用）
+- `repository/` — 数据访问层，GORM 查询/事务封装（user / role / menu / energy / jy_data / subscription / theme_content）
+- `model/` — GORM 实体模型：`user`、`sys_role`、`sys_menu`、`sys_user_role`、`sys_menu_role`、`image`、`xq_subscription`、`xq_theme_content`、`energy`、`summary`、`jy_data`
+- `middleware/` — 中间件：RequestID / Recovery / CORS / Logger / JWT / Casbin（Casbin 已实现但未挂载）
+- `router/` — 路由注册
+  - `router.go` — `Setup` 入口，组装中间件栈并调用各版本注册
   - `registrar.go` — 定义 `Registrar` 接口，各版本 Handlers 实现该接口自行注册路由
   - `public.go` — 无版本前缀的公共路由（`/health`、`/energy/asset` 油猴脚本直连）
-- `pkg/errcode/` — 类型化错误码
-- `pkg/jwt/` — JWT 令牌管理器
-- `pkg/response/` — 统一 JSON 响应工具
-- `pkg/upload/` — 文件上传工具
-- `pkg/snowflake/` — 雪花 ID 生成器（用于菜单 ID）
+  - `v1/` — `/api/v1` 业务路由（auth / user / role / menu / upload / trade / jy_data / energy / sse / ai / enum / subscription / theme_content 等 14 个路由文件）
+  - `v2/` — `/api/v2` 路由：`ws.go`（WebSocket 升级）+ `routes.go`/test 端点
+
+`pkg/` 通用工具：
+
+- `errcode/` — 类型化错误码（10xxx 认证/用户、20xxx 角色、30xxx 菜单、40xxx 订阅、50xxx 主题内容）
+- `jwt/` — JWT 令牌管理器（access + refresh 双令牌签发与校验）
+- `response/` — 统一 JSON 响应工具：`OK` / `Fail` / `OKWithPage`
+- `upload/` — 文件上传辅助（扩展名、大小校验、落盘路径）
+- `snowflake/` — 雪花 ID 生成器（用于菜单等需要分布式 ID 的场景）
 
 ## 常用命令
 
@@ -66,6 +101,7 @@ make swagger      # swag init -g cmd/server/main.go -o docs
 所有接口在 `/api/v1` 下。统一响应格式: `{"code": int, "data": any, "message": string}`。
 
 **公开接口**（无需认证）:
+
 - `GET /health` — 健康检查
 - `POST /api/v1/auth/register` — 用户注册
 - `POST /api/v1/auth/login` — 登录（返回 access + refresh 令牌、user、role、menuRoles）
@@ -81,6 +117,7 @@ make swagger      # swag init -g cmd/server/main.go -o docs
 - `POST|PUT|DELETE|GET /api/v1/theme-contents` — 主题内容 CRUD（含 batch/search/timeline）
 
 **受保护接口**（需要 JWT Bearer）:
+
 - `POST /api/v1/auth/logout` — 登出
 - `GET|POST /api/v1/users` — 用户列表（分页、关键词搜索）/ 创建用户
 - `GET /api/v1/users/profile` — 当前用户信息
@@ -109,13 +146,13 @@ make swagger      # swag init -g cmd/server/main.go -o docs
 ## 配置结构 (`internal/config/config.go`)
 
 ```yaml
-server:   # port, mode (debug/release)
-mysql:    # host, port, username, password, database, max_idle_conns, max_open_conns
-redis:    # host, port, password, db
-jwt:      # secret, access_expire (hours), refresh_expire (hours), issuer
-upload:   # path, max_size (MB), allow_exts
-cors:     # allow_origins
-ai:       # base_url, token (外部 AI 服务，Dify 风格 API)
+server: # 服务监听端口、运行模式（debug / release）
+mysql: # 主机、端口、用户名、密码、库名、最大空闲连接数、最大打开连接数
+redis: # 主机、端口、密码、库索引
+jwt: # 签名密钥、access 过期时长（小时）、refresh 过期时长（小时）、签发者
+upload: # 上传落盘路径、单文件大小上限（MB）、允许的扩展名白名单
+cors: # 允许跨域的来源列表
+ai: # 外部 AI 服务的 base_url 与 token（Dify 风格 API）
 ```
 
 ## 编码规范
