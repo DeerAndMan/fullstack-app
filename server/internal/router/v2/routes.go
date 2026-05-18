@@ -20,6 +20,7 @@ func (h *Handlers) Register(srv *server.Hertz, jwtManager *jwtpkg.Manager) {
 	RegisterRoutes(apiV2, protectedV2, h)
 }
 
+// RegisterRoutes 注册 API 的路由。
 func RegisterRoutes(public *route.RouterGroup, protected *route.RouterGroup, h *Handlers) {
 	registerTestRoutes(public, h.Test)
 }
