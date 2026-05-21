@@ -34,16 +34,16 @@ HTTP 绑定    业务逻辑     GORM 查询
 
 `internal/` 一句话定位速查（详细约定见各子目录下的 `CLAUDE.md`）：
 
-| 目录          | 一句话定位                                            |
-| ------------- | ----------------------------------------------------- |
-| `config/`     | Viper 配置结构体与加载器，只解析不写业务              |
-| `database/`   | MySQL / Redis 连接初始化与 AutoMigrate 注册           |
-| `handler/`    | HTTP 处理层，只做绑定 / 校验 / 响应封装               |
+| 目录          | 一句话定位                                               |
+| ------------- | -------------------------------------------------------- |
+| `config/`     | Viper 配置结构体与加载器，只解析不写业务                 |
+| `database/`   | MySQL / Redis 连接初始化与 AutoMigrate 注册              |
+| `handler/`    | HTTP 处理层，只做绑定 / 校验 / 响应封装                  |
 | `service/`    | 业务逻辑层 + 请求 / 响应 DTO，含 `ws_hub` WebSocket 枢纽 |
-| `repository/` | 数据访问层，Service 唯一访问 DB 的入口                |
-| `model/`      | GORM 实体，纯表结构、不含业务方法                     |
-| `middleware/` | Hertz 横切中间件，注明挂载顺序与 Casbin 未启用        |
-| `router/`     | 路由注册中心，`Registrar` 接口 + v1/v2 分版           |
+| `repository/` | 数据访问层，Service 唯一访问 DB 的入口                   |
+| `model/`      | GORM 实体，纯表结构、不含业务方法                        |
+| `middleware/` | Hertz 横切中间件，注明挂载顺序与 Casbin 未启用           |
+| `router/`     | 路由注册中心，`Registrar` 接口 + v1/v2 分版              |
 
 顶层：
 
