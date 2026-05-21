@@ -1,4 +1,4 @@
-package handler
+package v2
 
 import (
 	"context"
@@ -7,13 +7,13 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
-type TestHandlerV2 struct{}
+type TestHandler struct{}
 
-func NewTestHandlerV2() *TestHandlerV2 {
-	return &TestHandlerV2{}
+func NewTestHandler() *TestHandler {
+	return &TestHandler{}
 }
 
-func (h *TestHandlerV2) Ping(ctx context.Context, c *app.RequestContext) {
+func (h *TestHandler) Ping(ctx context.Context, c *app.RequestContext) {
 	c.JSON(consts.StatusOK, map[string]any{
 		"code":    0,
 		"data":    "pong from v2",

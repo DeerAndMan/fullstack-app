@@ -4,10 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"fullstack-app/server/internal/config"
 	"fullstack-app/server/internal/database"
 	"fullstack-app/server/internal/router"
+	"fullstack-app/server/internal/service"
 	jwtpkg "fullstack-app/server/pkg/jwt"
 	"fullstack-app/server/pkg/upload"
 
@@ -85,7 +87,7 @@ func main() {
 	uploader := upload.NewUploader(cfg.Upload.Path, cfg.Upload.MaxSize, cfg.Upload.AllowExts)
 
 	// 组装依赖
-	handlers, handlersV2 := initHandlers(db, jwtManager, uploader, cfg)
+	deps := initHandlers(db, jwtManager, uploader, cfg)
 
 	// Hertz server
 	h := server.Default(
@@ -94,7 +96,10 @@ func main() {
 	)
 
 	// Routes
-	router.Setup(h, jwtManager, cfg.CORS.AllowOrigins, handlers, handlersV2)
+	router.Setup(h, jwtManager, cfg.CORS.AllowOrigins, deps.V1, deps.V2)
+
+	// WebSocket 主动推送 demo：每 2 秒向所有在线连接广播一次
+	startWsTickerDemo(deps.WsHub)
 
 	// Startup banner
 	fmt.Println()
@@ -109,4 +114,23 @@ func main() {
 	fmt.Println()
 
 	h.Spin()
+}
+
+// startWsTickerDemo 启动一个后台 goroutine，演示服务端主动推送。
+// 生产环境中应替换为真实的业务事件触发。
+func startWsTickerDemo(hub *service.WsHub) {
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+		for t := range ticker.C {
+			if hub.Count() == 0 {
+				continue
+			}
+			hub.Broadcast(map[string]any{
+				"type":      "tick",
+				"content":   "hello from server",
+				"timestamp": t,
+			})
+		}
+	}()
 }

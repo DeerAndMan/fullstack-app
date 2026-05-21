@@ -1,11 +1,11 @@
 package v2
 
 import (
-	"fullstack-app/server/internal/handler"
+	handlerv2 "fullstack-app/server/internal/handler/v2"
 
 	"github.com/cloudwego/hertz/pkg/route"
 )
 
-func registerTestRoutes(public *route.RouterGroup, h *handler.TestHandlerV2) {
+func registerTestRoutes(public *route.RouterGroup, h *handlerv2.TestHandler) {
 	public.GET("/test/ping", h.Ping)
 }

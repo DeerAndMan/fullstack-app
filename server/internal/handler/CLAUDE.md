@@ -4,21 +4,55 @@
 
 HTTP 处理层。只做参数绑定、校验和响应封装，**不写业务逻辑**。每个 handler 文件对应一个领域，调用同名 `internal/service` 完成实际工作。
 
+## 目录结构
+
+按 API 版本组织：
+
+```
+handler/
+├── v1/              # /api/v1 版本的 handlers
+│   ├── auth.go
+│   ├── user.go
+│   ├── role.go
+│   ├── menu.go
+│   ├── upload.go
+│   ├── enum.go
+│   ├── trade.go
+│   ├── jy_data.go
+│   ├── energy.go
+│   ├── subscription.go
+│   ├── theme_content.go
+│   ├── sse.go      # SSE 流式 AI 对话
+│   └── ai.go       # 会话历史
+└── v2/              # /api/v2 版本的 handlers
+    ├── test.go      # 测试端点
+    └── ws.go        # WebSocket 接入点
+```
+
 ## 内容
+
+### v1 版本（业务主体）
 
 - **业务**：`auth.go` / `user.go` / `role.go` / `menu.go` / `upload.go` / `enum.go`
 - **数据**：`trade.go` / `jy_data.go` / `energy.go` / `subscription.go` / `theme_content.go`
-- **实时 / AI**：`sse.go`（SSE 流式 AI 对话）/ `ai.go`（会话历史）/ `ws_v2.go`（WebSocket，挂在 `/api/v2`）
-- **其他**：`test_v2.go`（v2 测试端点）
+- **实时 / AI**：`sse.go`（SSE 流式 AI 对话）/ `ai.go`（会话历史）
+
+### v2 版本（实验性功能）
+
+- `test.go` — 测试端点
+- `ws.go` — WebSocket 接入点，配合 `service.WsHub` 实现服务端主动推送
 
 ## 约定
 
+- **包名**：v1 目录下的文件 `package v1`，v2 目录下的文件 `package v2`
+- **类型命名**：去掉版本后缀，如 `TestHandler`（不是 `TestHandlerV2`），通过包名区分版本
 - Hertz 风格签名：`func (h *XxxHandler) Method(ctx context.Context, c *app.RequestContext)`，**不要**使用 `*gin.Context`。
 - 参数绑定 + 校验用 `c.BindAndValidate(&req)`，配合 `vd:` 标签；不写独立的 if/return 校验。
 - 响应统一走 `pkg/response`：`response.OK / Fail / OKWithPage`，禁止直接 `c.JSON`。
 - 请求 / 响应 DTO 定义在 `internal/service` 中，handler 只引用、不重新定义。
 - 文件命名 snake_case，与 service / repository 中的同领域文件保持一致。
 - 新增领域时同步在 `internal/router/v1` 或 `v2` 下注册路由。
+- 新增版本时创建 `internal/handler/vN/` 目录，并在 `internal/router/vN/` 中注册对应路由。
 
 ## 与 service / repository 的边界
 

@@ -2,7 +2,8 @@ package main
 
 import (
 	"fullstack-app/server/internal/config"
-	"fullstack-app/server/internal/handler"
+	handlerv1 "fullstack-app/server/internal/handler/v1"
+	handlerv2 "fullstack-app/server/internal/handler/v2"
 	"fullstack-app/server/internal/repository"
 	v1 "fullstack-app/server/internal/router/v1"
 	v2 "fullstack-app/server/internal/router/v2"
@@ -13,7 +14,14 @@ import (
 	"gorm.io/gorm"
 )
 
-func initHandlers(db *gorm.DB, jwtManager *jwtpkg.Manager, uploader *upload.Uploader, cfg *config.Config) (*v1.Handlers, *v2.Handlers) {
+// AppDeps 汇总了 main 中需要直接使用的依赖（例如 WsHub 需要在外部触发广播）。
+type AppDeps struct {
+	V1    *v1.Handlers
+	V2    *v2.Handlers
+	WsHub *service.WsHub
+}
+
+func initHandlers(db *gorm.DB, jwtManager *jwtpkg.Manager, uploader *upload.Uploader, cfg *config.Config) *AppDeps {
 	// Repository
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
@@ -36,28 +44,30 @@ func initHandlers(db *gorm.DB, jwtManager *jwtpkg.Manager, uploader *upload.Uplo
 	menuSvc := service.NewMenuService(menuRepo)
 	subSvc := service.NewSubscriptionService(subRepo, tcRepo)
 	tcSvc := service.NewThemeContentService(tcRepo, subSvc)
+	wsHub := service.NewWsHub()
 
 	// v1 Handlers
 	handlers := &v1.Handlers{
-		Auth:         handler.NewAuthHandler(authSvc),
-		User:         handler.NewUserHandler(userSvc),
-		Role:         handler.NewRoleHandler(roleSvc),
-		Upload:       handler.NewUploadHandler(uploadSvc),
-		Energy:       handler.NewEnergyHandler(energySvc),
-		Trade:        handler.NewTradeHandler(tradeSvc),
-		JyData:       handler.NewJyDataHandler(jyDataSvc),
-		Sse:          handler.NewSseHandler(sseSvc),
-		Ai:           handler.NewAiHandler(aiSvc),
-		Enum:         handler.NewEnumHandler(roleSvc),
-		Menu:         handler.NewMenuHandler(menuSvc),
-		Subscription: handler.NewSubscriptionHandler(subSvc),
-		ThemeContent: handler.NewThemeContentHandler(tcSvc),
+		Auth:         handlerv1.NewAuthHandler(authSvc),
+		User:         handlerv1.NewUserHandler(userSvc),
+		Role:         handlerv1.NewRoleHandler(roleSvc),
+		Upload:       handlerv1.NewUploadHandler(uploadSvc),
+		Energy:       handlerv1.NewEnergyHandler(energySvc),
+		Trade:        handlerv1.NewTradeHandler(tradeSvc),
+		JyData:       handlerv1.NewJyDataHandler(jyDataSvc),
+		Sse:          handlerv1.NewSseHandler(sseSvc),
+		Ai:           handlerv1.NewAiHandler(aiSvc),
+		Enum:         handlerv1.NewEnumHandler(roleSvc),
+		Menu:         handlerv1.NewMenuHandler(menuSvc),
+		Subscription: handlerv1.NewSubscriptionHandler(subSvc),
+		ThemeContent: handlerv1.NewThemeContentHandler(tcSvc),
 	}
 
 	// v2 Handlers
 	handlersV2 := &v2.Handlers{
-		Test: handler.NewTestHandlerV2(),
+		Test: handlerv2.NewTestHandler(),
+		Ws:   handlerv2.NewWsHandler(wsHub),
 	}
 
-	return handlers, handlersV2
+	return &AppDeps{V1: handlers, V2: handlersV2, WsHub: wsHub}
 }

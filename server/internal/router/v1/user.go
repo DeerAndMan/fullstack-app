@@ -1,12 +1,12 @@
 package v1
 
 import (
-	"fullstack-app/server/internal/handler"
+	handlerv1 "fullstack-app/server/internal/handler/v1"
 
 	"github.com/cloudwego/hertz/pkg/route"
 )
 
-func registerUserRoutes(protected *route.RouterGroup, h *handler.UserHandler) {
+func registerUserRoutes(protected *route.RouterGroup, h *handlerv1.UserHandler) {
 	users := protected.Group("/users")
 	{
 		users.GET("", h.List)

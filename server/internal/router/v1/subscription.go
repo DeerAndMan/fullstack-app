@@ -1,12 +1,12 @@
 package v1
 
 import (
-	"fullstack-app/server/internal/handler"
+	handlerv1 "fullstack-app/server/internal/handler/v1"
 
 	"github.com/cloudwego/hertz/pkg/route"
 )
 
-func registerSubscriptionRoutes(public *route.RouterGroup, h *handler.SubscriptionHandler) {
+func registerSubscriptionRoutes(public *route.RouterGroup, h *handlerv1.SubscriptionHandler) {
 	subs := public.Group("/subscriptions")
 	{
 		subs.POST("", h.Create)

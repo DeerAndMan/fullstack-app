@@ -1,7 +1,7 @@
 package v2
 
 import (
-	"fullstack-app/server/internal/handler"
+	handlerv2 "fullstack-app/server/internal/handler/v2"
 	"fullstack-app/server/internal/middleware"
 	jwtpkg "fullstack-app/server/pkg/jwt"
 
@@ -10,7 +10,8 @@ import (
 )
 
 type Handlers struct {
-	Test *handler.TestHandlerV2
+	Test *handlerv2.TestHandler
+	Ws   *handlerv2.WsHandler
 }
 
 func (h *Handlers) Register(srv *server.Hertz, jwtManager *jwtpkg.Manager) {
@@ -23,4 +24,5 @@ func (h *Handlers) Register(srv *server.Hertz, jwtManager *jwtpkg.Manager) {
 // RegisterRoutes 注册 API 的路由。
 func RegisterRoutes(public *route.RouterGroup, protected *route.RouterGroup, h *Handlers) {
 	registerTestRoutes(public, h.Test)
+	registerWsRoutes(public, h.Ws)
 }

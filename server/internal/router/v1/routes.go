@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"fullstack-app/server/internal/handler"
+	handlerv1 "fullstack-app/server/internal/handler/v1"
 	"fullstack-app/server/internal/middleware"
 	jwtpkg "fullstack-app/server/pkg/jwt"
 
@@ -10,19 +10,19 @@ import (
 )
 
 type Handlers struct {
-	Auth         *handler.AuthHandler
-	User         *handler.UserHandler
-	Role         *handler.RoleHandler
-	Upload       *handler.UploadHandler
-	Energy       *handler.EnergyHandler
-	Trade        *handler.TradeHandler
-	JyData       *handler.JyDataHandler
-	Sse          *handler.SseHandler
-	Ai           *handler.AiHandler
-	Enum         *handler.EnumHandler
-	Menu         *handler.MenuHandler
-	Subscription *handler.SubscriptionHandler
-	ThemeContent *handler.ThemeContentHandler
+	Auth         *handlerv1.AuthHandler
+	User         *handlerv1.UserHandler
+	Role         *handlerv1.RoleHandler
+	Upload       *handlerv1.UploadHandler
+	Energy       *handlerv1.EnergyHandler
+	Trade        *handlerv1.TradeHandler
+	JyData       *handlerv1.JyDataHandler
+	Sse          *handlerv1.SseHandler
+	Ai           *handlerv1.AiHandler
+	Enum         *handlerv1.EnumHandler
+	Menu         *handlerv1.MenuHandler
+	Subscription *handlerv1.SubscriptionHandler
+	ThemeContent *handlerv1.ThemeContentHandler
 }
 
 func (h *Handlers) Register(srv *server.Hertz, jwtManager *jwtpkg.Manager) {

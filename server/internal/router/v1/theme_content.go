@@ -1,12 +1,12 @@
 package v1
 
 import (
-	"fullstack-app/server/internal/handler"
+	handlerv1 "fullstack-app/server/internal/handler/v1"
 
 	"github.com/cloudwego/hertz/pkg/route"
 )
 
-func registerThemeContentRoutes(public *route.RouterGroup, h *handler.ThemeContentHandler) {
+func registerThemeContentRoutes(public *route.RouterGroup, h *handlerv1.ThemeContentHandler) {
 	tc := public.Group("/theme-contents")
 	{
 		tc.POST("/batch", h.BatchCreate)

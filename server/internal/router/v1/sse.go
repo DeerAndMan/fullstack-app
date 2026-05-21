@@ -1,12 +1,12 @@
 package v1
 
 import (
-	"fullstack-app/server/internal/handler"
+	handlerv1 "fullstack-app/server/internal/handler/v1"
 
 	"github.com/cloudwego/hertz/pkg/route"
 )
 
-func registerSseRoutes(public *route.RouterGroup, h *handler.SseHandler) {
+func registerSseRoutes(public *route.RouterGroup, h *handlerv1.SseHandler) {
 	sse := public.Group("/sse")
 	{
 		sse.POST("/chat-messages", h.ChatMessages)

@@ -1,12 +1,12 @@
 package v1
 
 import (
-	"fullstack-app/server/internal/handler"
+	handlerv1 "fullstack-app/server/internal/handler/v1"
 
 	"github.com/cloudwego/hertz/pkg/route"
 )
 
-func registerMenuRoutes(protected *route.RouterGroup, h *handler.MenuHandler) {
+func registerMenuRoutes(protected *route.RouterGroup, h *handlerv1.MenuHandler) {
 	menus := protected.Group("/menus")
 	{
 		menus.GET("", h.List)
