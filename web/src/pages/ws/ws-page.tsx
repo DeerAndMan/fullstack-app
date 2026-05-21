@@ -22,7 +22,7 @@ export const WsPage = () => {
     setWsData(data);
   };
 
-  const ws = useMemo(() => new wsInit<DType>("/conversations/socket", { onMessage }).ws, []);
+  const ws = useMemo(() => new wsInit<DType>("/api/v2/ws/conversations", { onMessage }).ws, []);
 
   useEffect(() => {
     return () => {

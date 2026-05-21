@@ -1,18 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(go build *)",
-      "Bash(go get *)",
-      "WebSearch",
-      "Bash(npx tsc *)",
-      "Bash(git checkout *)",
-      "Bash(go mod *)",
-      "Bash(go test *)",
-      "Bash(make *)",
-      "Bash(gofmt *)",
-      "Bash(npm *)",
-      "Bash(go vet *)"
-    ]
+    "allow": []
   },
   "language": "Chinese"
 }
