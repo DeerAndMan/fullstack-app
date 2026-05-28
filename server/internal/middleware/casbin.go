@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"fullstack-app/server/pkg/errcode"
 	"fullstack-app/server/pkg/response"
 
 	"github.com/casbin/casbin/v2"
@@ -21,16 +22,16 @@ func CasbinRBAC(enforcer *casbin.Enforcer) app.HandlerFunc {
 		if err != nil {
 			zap.L().Error("casbin enforce error", zap.Error(err))
 			c.AbortWithStatusJSON(http.StatusInternalServerError, response.Body{
-				Code:    500,
-				Message: "internal server error",
+				Code:    errcode.ErrInternal.Code,
+				Message: errcode.ErrInternal.Message,
 			})
 			return
 		}
 
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusForbidden, response.Body{
-				Code:    403,
-				Message: "forbidden",
+				Code:    errcode.ErrForbidden.Code,
+				Message: errcode.ErrForbidden.Message,
 			})
 			return
 		}

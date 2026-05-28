@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"strconv"
 
 	"fullstack-app/server/internal/model"
 	"fullstack-app/server/internal/repository"
@@ -22,13 +23,12 @@ func NewAuthService(userRepo *repository.UserRepository, jwtManager *jwtpkg.Mana
 }
 
 type RegisterRequest struct {
-	Username string `json:"username" vd:"len($)>0 && len($)<=64"`
-	Password string `json:"password" vd:"len($)>=6 && len($)<=32"`
-	Nickname string `json:"nickname"`
+	Name     string `json:"name" vd:"len($)>0 && len($)<=64"`
+	Password string `json:"password" vd:"len($)>0"`
 }
 
 type LoginRequest struct {
-	Username string `json:"username" vd:"len($)>0"`
+	Name     string `json:"name" vd:"len($)>0"`
 	Password string `json:"password" vd:"len($)>0"`
 }
 
@@ -37,7 +37,7 @@ type RefreshTokenRequest struct {
 }
 
 func (s *AuthService) Register(req *RegisterRequest) error {
-	exists, err := s.userRepo.ExistsByUsername(req.Username)
+	exists, err := s.userRepo.ExistsByName(req.Name)
 	if err != nil {
 		return errcode.ErrInternal
 	}
@@ -51,20 +51,34 @@ func (s *AuthService) Register(req *RegisterRequest) error {
 	}
 
 	user := &model.User{
-		Username: req.Username,
+		Name:     req.Name,
 		Password: string(hashed),
-		Nickname: req.Nickname,
-		Status:   1,
 	}
-	if user.Nickname == "" {
-		user.Nickname = user.Username
-	}
-
 	return s.userRepo.Create(user)
 }
 
-func (s *AuthService) Login(req *LoginRequest) (*jwtpkg.TokenPair, error) {
-	user, err := s.userRepo.GetByUsername(req.Username)
+type LoginResponse struct {
+	Token     *jwtpkg.TokenPair `json:"token"`
+	User      *UserResponse     `json:"user"`
+	Role      *model.Role       `json:"role"`
+	MenuRoles []MenuResponse    `json:"menuRoles"`
+}
+
+type MenuResponse struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	LinkURL  string `json:"link_url"`
+	MenuCode string `json:"menu_code"`
+	ParentID string `json:"parent_id"`
+	NodeType int8   `json:"node_type"`
+	IconURL  string `json:"icon_url"`
+	Level    int    `json:"level"`
+	Path     string `json:"path"`
+	IsDelete int8   `json:"is_delete"`
+}
+
+func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
+	user, err := s.userRepo.GetByName(req.Name)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errcode.ErrInvalidCredentials
@@ -72,22 +86,76 @@ func (s *AuthService) Login(req *LoginRequest) (*jwtpkg.TokenPair, error) {
 		return nil, errcode.ErrInternal
 	}
 
-	if user.Status == 0 {
-		return nil, errcode.ErrUserDisabled
-	}
-
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return nil, errcode.ErrInvalidCredentials
 	}
 
-	return s.jwtManager.GenerateTokenPair(user.ID, user.Username)
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, user.Name)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	userResp := ToUserResponse(user)
+	if userResp != nil {
+		avatar, err := s.userRepo.GetLatestAvatar(user.ID)
+		if err != nil {
+			return nil, errcode.ErrInternal
+		}
+		userResp.Avatar = avatar
+	}
+
+	role, err := s.userRepo.GetRoleByUserID(user.ID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	var menuRoles []MenuResponse
+	if role != nil {
+		menus, err := s.userRepo.GetMenusByRoleID(role.RoleID)
+		if err != nil {
+			return nil, errcode.ErrInternal
+		}
+		menuRoles = ToMenuResponses(menus)
+	}
+
+	return &LoginResponse{
+		Token:     tokenPair,
+		User:      userResp,
+		Role:      role,
+		MenuRoles: menuRoles,
+	}, nil
 }
 
 func (s *AuthService) RefreshToken(req *RefreshTokenRequest) (*jwtpkg.TokenPair, error) {
-	claims, err := s.jwtManager.ParseToken(req.RefreshToken)
+	claims, err := s.jwtManager.ParseRefreshToken(req.RefreshToken)
 	if err != nil {
 		return nil, errcode.ErrTokenInvalid
 	}
 
 	return s.jwtManager.GenerateTokenPair(claims.UserID, claims.Username)
+}
+
+func (s *AuthService) Logout() error {
+	// 当前 JWT 为无状态令牌，服务端不维护会话
+	// 后续可接入 Redis 黑名单机制
+	return nil
+}
+
+func ToMenuResponses(menus []model.Menu) []MenuResponse {
+	list := make([]MenuResponse, 0, len(menus))
+	for _, menu := range menus {
+		list = append(list, MenuResponse{
+			ID:       strconv.FormatInt(menu.ID, 10),
+			Name:     menu.Name,
+			LinkURL:  menu.LinkURL,
+			MenuCode: menu.MenuCode,
+			ParentID: strconv.FormatInt(menu.ParentID, 10),
+			NodeType: menu.NodeType,
+			IconURL:  menu.IconURL,
+			Level:    menu.Level,
+			Path:     menu.Path,
+			IsDelete: menu.IsDelete,
+		})
+	}
+	return list
 }

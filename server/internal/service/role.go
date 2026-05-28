@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"time"
 
 	"fullstack-app/server/internal/model"
 	"fullstack-app/server/internal/repository"
@@ -19,16 +20,18 @@ func NewRoleService(roleRepo *repository.RoleRepository) *RoleService {
 }
 
 type CreateRoleRequest struct {
-	Name   string `json:"name" vd:"len($)>0 && len($)<=64"`
-	Code   string `json:"code" vd:"len($)>0 && len($)<=64"`
-	Remark string `json:"remark"`
+	RoleName string  `json:"role_name" vd:"len($)>0 && len($)<=64"`
+	RoleKey  string  `json:"role_key" vd:"len($)>0 && len($)<=100"`
+	Sort     int     `json:"sort"`
+	Remark   *string `json:"remark"`
 }
 
 type UpdateRoleRequest struct {
-	Name   string `json:"name"`
-	Code   string `json:"code"`
-	Remark string `json:"remark"`
-	Status *int8  `json:"status"`
+	RoleName   string  `json:"role_name"`
+	RoleKey    string  `json:"role_key"`
+	Sort       *int    `json:"sort"`
+	Remark     *string `json:"remark"`
+	RoleStatus *int8   `json:"role_status"`
 }
 
 type ListRoleRequest struct {
@@ -38,19 +41,34 @@ type ListRoleRequest struct {
 }
 
 func (s *RoleService) Create(req *CreateRoleRequest) error {
-	exists, err := s.roleRepo.ExistsByCode(req.Code)
+	codeExists, err := s.roleRepo.ExistsByCode(req.RoleKey)
 	if err != nil {
 		return errcode.ErrInternal
 	}
-	if exists {
+	if codeExists {
+		return errcode.ErrRoleCodeExists
+	}
+
+	nameExists, err := s.roleRepo.ExistsByName(req.RoleName)
+	if err != nil {
+		return errcode.ErrInternal
+	}
+	if nameExists {
 		return errcode.ErrRoleNameExists
 	}
 
+	now := time.Now()
 	role := &model.Role{
-		Name:   req.Name,
-		Code:   req.Code,
-		Remark: req.Remark,
-		Status: 1,
+		RoleName:   req.RoleName,
+		RoleKey:    req.RoleKey,
+		Sort:       req.Sort,
+		Remark:     req.Remark,
+		RoleStatus: 1,
+		CreateBy:   "",
+		CreateTime: now,
+		UpdateBy:   "",
+		UpdateTime: now,
+		DelFlag:    0,
 	}
 	return s.roleRepo.Create(role)
 }
@@ -75,18 +93,22 @@ func (s *RoleService) Update(id uint, req *UpdateRoleRequest) error {
 		return errcode.ErrInternal
 	}
 
-	if req.Name != "" {
-		role.Name = req.Name
+	if req.RoleName != "" {
+		role.RoleName = req.RoleName
 	}
-	if req.Code != "" {
-		role.Code = req.Code
+	if req.RoleKey != "" {
+		role.RoleKey = req.RoleKey
 	}
-	if req.Remark != "" {
+	if req.Sort != nil {
+		role.Sort = *req.Sort
+	}
+	if req.Remark != nil {
 		role.Remark = req.Remark
 	}
-	if req.Status != nil {
-		role.Status = *req.Status
+	if req.RoleStatus != nil {
+		role.RoleStatus = *req.RoleStatus
 	}
+	role.UpdateTime = time.Now()
 
 	return s.roleRepo.Update(role)
 }

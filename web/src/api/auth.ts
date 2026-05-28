@@ -2,7 +2,7 @@ import request from "./request";
 import type { ApiResponse, TokenPair } from "@/types/api";
 
 export function login(data: { username: string; password: string }) {
-  return request.post<ApiResponse<TokenPair>>("/auth/login", data);
+  return request.post<ApiResponse<TokenPair>>("/api/v1/auth/login", data);
 }
 
 export function register(data: {
@@ -10,9 +10,9 @@ export function register(data: {
   password: string;
   nickname?: string;
 }) {
-  return request.post<ApiResponse>("/auth/register", data);
+  return request.post<ApiResponse>("/api/v1/auth/register", data);
 }
 
 export function refreshToken(data: { refresh_token: string }) {
-  return request.post<ApiResponse<TokenPair>>("/auth/refresh-token", data);
+  return request.post<ApiResponse<TokenPair>>("/api/v1/auth/refresh-token", data);
 }

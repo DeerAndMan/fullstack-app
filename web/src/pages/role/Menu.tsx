@@ -8,7 +8,7 @@ import {
   getRoleRoutingByRoleIdQuery,
   menuListQuery,
   roleRoutingMutation,
-} from "@/hooks/query/use-query-menu";
+} from "@/api/menu";
 import { FormItem, FormWrap } from "@/components/form";
 import { buildMenuTree } from "@/utils/treeTransform";
 

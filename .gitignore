@@ -6,12 +6,14 @@ vendor/
 dist/
 bin/
 tmp/
+server/server
 
 # Environment
 .env
 .env.local
 .env.*.local
-server/config/config.yaml
+.claude
+.claude/
 
 # IDE
 .idea/

@@ -3,7 +3,7 @@ import { Button, Form, message, Modal, Select } from "antd";
 
 import { useAuthStore } from "@/stores/auth";
 import { useEnumStore } from "@/stores/enum";
-import { getQueryUserList, userRoleMutation } from "@/hooks/query/user-query-user";
+import { getQueryUserList, userRoleMutation } from "@/api/user/user.query";
 
 import type { FormProps } from "antd";
 

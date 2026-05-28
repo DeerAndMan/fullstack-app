@@ -4,7 +4,7 @@ import { UserOutlined } from "@ant-design/icons";
 
 import ROUTER_PATH from "@/router/section/router-path";
 import { base64ToImg } from "@/utils/img";
-import { userQuery } from "@/hooks/query/user-query-user";
+import { userQuery } from "@/api/user/user.query";
 
 import type { TableColumnsType } from "antd";
 import type { Account, Role } from "@/types/user";
@@ -20,9 +20,7 @@ export default function list() {
       title: "头像",
       dataIndex: "avatar",
       key: "avatar",
-      render: (value: string) => (
-        <Avatar alt="用户头像" icon={<UserOutlined />} src={base64ToImg(value)} />
-      ),
+      render: (value: string) => <Avatar alt="用户头像" icon={<UserOutlined />} src={base64ToImg(value)} />,
     },
     { title: "账号", dataIndex: "name", key: "name" },
     { title: "年龄", dataIndex: "age", key: "age" },
@@ -55,7 +53,7 @@ export default function list() {
         size="small"
         loading={queryList.isLoading}
         columns={columns}
-        dataSource={(queryList.data?.data || []).map(l => ({ ...l, key: l.id }))}
+        dataSource={(queryList.data?.data?.list || []).map(l => ({ ...l, key: l.id }))}
       />
     </div>
   );

@@ -4,7 +4,7 @@ import { Button, Card, Descriptions, Table, Tag, Tooltip } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
-import { useQuerySubscribeDetail } from "@/hooks/query/subscribe";
+import { useQuerySubscribeDetail } from "@/api/subscribe";
 import type { ThemeContentItem } from "@/types/xq/subscribe/home";
 
 function stripHtml(html: string): string {

@@ -8,8 +8,9 @@ import (
 )
 
 type Claims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
+	UserID    uint   `json:"user_id"`
+	Username  string `json:"username"`
+	TokenType string `json:"token_type"` // "access" or "refresh"
 	jwt.RegisteredClaims
 }
 
@@ -39,12 +40,12 @@ func (m *Manager) GenerateTokenPair(userID uint, username string) (*TokenPair, e
 	now := time.Now()
 	accessExpAt := now.Add(m.accessExpire)
 
-	accessToken, err := m.generateToken(userID, username, accessExpAt)
+	accessToken, err := m.generateToken(userID, username, "access", accessExpAt)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := m.generateToken(userID, username, now.Add(m.refreshExpire))
+	refreshToken, err := m.generateToken(userID, username, "refresh", now.Add(m.refreshExpire))
 	if err != nil {
 		return nil, err
 	}
@@ -56,10 +57,11 @@ func (m *Manager) GenerateTokenPair(userID uint, username string) (*TokenPair, e
 	}, nil
 }
 
-func (m *Manager) generateToken(userID uint, username string, expiresAt time.Time) (string, error) {
+func (m *Manager) generateToken(userID uint, username string, tokenType string, expiresAt time.Time) (string, error) {
 	claims := Claims{
-		UserID:   userID,
-		Username: username,
+		UserID:    userID,
+		Username:  username,
+		TokenType: tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -84,6 +86,28 @@ func (m *Manager) ParseToken(tokenStr string) (*Claims, error) {
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid token")
+	}
+	return claims, nil
+}
+
+func (m *Manager) ParseAccessToken(tokenStr string) (*Claims, error) {
+	claims, err := m.ParseToken(tokenStr)
+	if err != nil {
+		return nil, err
+	}
+	if claims.TokenType != "access" {
+		return nil, errors.New("invalid token type: expected access token")
+	}
+	return claims, nil
+}
+
+func (m *Manager) ParseRefreshToken(tokenStr string) (*Claims, error) {
+	claims, err := m.ParseToken(tokenStr)
+	if err != nil {
+		return nil, err
+	}
+	if claims.TokenType != "refresh" {
+		return nil, errors.New("invalid token type: expected refresh token")
 	}
 	return claims, nil
 }

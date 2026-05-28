@@ -3,26 +3,54 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"time"
 
 	"fullstack-app/server/internal/config"
 	"fullstack-app/server/internal/database"
-	"fullstack-app/server/internal/handler"
-	"fullstack-app/server/internal/repository"
 	"fullstack-app/server/internal/router"
 	"fullstack-app/server/internal/service"
 	jwtpkg "fullstack-app/server/pkg/jwt"
 	"fullstack-app/server/pkg/upload"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/fatih/color"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func main() {
 	configPath := flag.String("config", "config/config.yaml", "config file path")
 	flag.Parse()
 
-	// Logger
-	logger, _ := zap.NewProduction()
+	// Logger (fatih/color 彩色控制台输出)
+	colorLevel := func(l zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+		var s string
+		switch l {
+		case zapcore.DebugLevel:
+			s = color.CyanString("DEBUG")
+		case zapcore.InfoLevel:
+			s = color.GreenString("INFO")
+		case zapcore.WarnLevel:
+			s = color.YellowString("WARN")
+		case zapcore.ErrorLevel:
+			s = color.RedString("ERROR")
+		case zapcore.FatalLevel:
+			s = color.New(color.FgRed, color.Bold).Sprint("FATAL")
+		default:
+			s = l.CapitalString()
+		}
+		enc.AppendString(s)
+	}
+	encoderCfg := zap.NewDevelopmentEncoderConfig()
+	encoderCfg.EncodeLevel = colorLevel
+	encoderCfg.EncodeTime = zapcore.TimeEncoderOfLayout("2006/01/02 15:04:05")
+	encoderCfg.EncodeCaller = zapcore.ShortCallerEncoder
+	logger := zap.New(zapcore.NewCore(
+		zapcore.NewConsoleEncoder(encoderCfg),
+		zapcore.AddSync(os.Stdout),
+		zapcore.DebugLevel,
+	), zap.AddCaller())
 	defer logger.Sync()
 	zap.ReplaceGlobals(logger)
 
@@ -33,7 +61,7 @@ func main() {
 	}
 
 	// MySQL
-	db, err := database.NewMySQL(&cfg.MySQL)
+	db, err := database.NewMySQL(&cfg.MySQL, cfg.Server.Mode)
 	if err != nil {
 		zap.L().Fatal("connect mysql failed", zap.Error(err))
 	}
@@ -41,10 +69,10 @@ func main() {
 		zap.L().Fatal("auto migrate failed", zap.Error(err))
 	}
 
-	// Redis
+	// Redis (应用层暂未使用，连接失败不阻塞启动)
 	_, err = database.NewRedis(&cfg.Redis)
 	if err != nil {
-		zap.L().Fatal("connect redis failed", zap.Error(err))
+		zap.L().Warn("connect redis failed, skipping", zap.Error(err))
 	}
 
 	// JWT
@@ -58,23 +86,8 @@ func main() {
 	// Uploader
 	uploader := upload.NewUploader(cfg.Upload.Path, cfg.Upload.MaxSize, cfg.Upload.AllowExts)
 
-	// Repository
-	userRepo := repository.NewUserRepository(db)
-	roleRepo := repository.NewRoleRepository(db)
-
-	// Service
-	authSvc := service.NewAuthService(userRepo, jwtManager)
-	userSvc := service.NewUserService(userRepo)
-	roleSvc := service.NewRoleService(roleRepo)
-	uploadSvc := service.NewUploadService(uploader)
-
-	// Handler
-	handlers := &router.Handlers{
-		Auth:   handler.NewAuthHandler(authSvc),
-		User:   handler.NewUserHandler(userSvc),
-		Role:   handler.NewRoleHandler(roleSvc),
-		Upload: handler.NewUploadHandler(uploadSvc),
-	}
+	// 组装依赖
+	deps := initHandlers(db, jwtManager, uploader, cfg)
 
 	// Hertz server
 	h := server.Default(
@@ -83,8 +96,41 @@ func main() {
 	)
 
 	// Routes
-	router.Setup(h, handlers, jwtManager)
+	router.Setup(h, jwtManager, cfg.CORS.AllowOrigins, deps.V1, deps.V2)
 
-	zap.L().Info("server starting", zap.Int("port", cfg.Server.Port))
+	// WebSocket 主动推送 demo：每 2 秒向所有在线连接广播一次
+	startWsTickerDemo(deps.WsHub)
+
+	// Startup banner
+	fmt.Println()
+	fmt.Println(color.CyanString("  ┌─────────────────────────────────────────┐"))
+	fmt.Println(color.CyanString("  │") + color.GreenString("   Fullstack App Server Ready              ") + color.CyanString("│"))
+	fmt.Println(color.CyanString("  ├─────────────────────────────────────────┤"))
+	fmt.Printf("  %s  %-8s %s\n", color.CyanString("│"), color.YellowString("Local:"), color.GreenString("http://localhost:%d", cfg.Server.Port))
+	fmt.Printf("  %s  %-8s %s\n", color.CyanString("│"), color.YellowString("Mode:"), cfg.Server.Mode)
+	fmt.Printf("  %s  %-8s %s\n", color.CyanString("│"), color.YellowString("MySQL:"), fmt.Sprintf("%s:%d/%s", cfg.MySQL.Host, cfg.MySQL.Port, cfg.MySQL.Database))
+	fmt.Printf("  %s  %-8s %s\n", color.CyanString("│"), color.YellowString("Redis:"), cfg.Redis.Addr())
+	fmt.Println(color.CyanString("  └─────────────────────────────────────────┘"))
+	fmt.Println()
+
 	h.Spin()
+}
+
+// startWsTickerDemo 启动一个后台 goroutine，演示服务端主动推送。
+// 生产环境中应替换为真实的业务事件触发。
+func startWsTickerDemo(hub *service.WsHub) {
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+		for t := range ticker.C {
+			if hub.Count() == 0 {
+				continue
+			}
+			hub.Broadcast(map[string]any{
+				"type":      "tick",
+				"content":   "hello from server",
+				"timestamp": t,
+			})
+		}
+	}()
 }

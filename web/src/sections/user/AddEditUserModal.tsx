@@ -6,8 +6,8 @@ import { nanoid } from "nanoid";
 import { encryptPassword } from "@/utils";
 import { base64ToImg } from "@/utils/img";
 import { userApi } from "@/api";
-import { uploadAvatar } from "@/api/user";
-import { userQuery } from "@/hooks/query/user-query-user";
+import { uploadAvatar } from "@/api/user/user.service";
+import { userQuery } from "@/api/user/user.query";
 
 import type { FormProps, UploadFile } from "antd";
 import type { Account, AddAccount } from "@/types/user";
