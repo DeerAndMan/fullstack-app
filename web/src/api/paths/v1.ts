@@ -1,4 +1,4 @@
-export const apiControl = {
+export const apiPathsV1 = {
   auth: {
     login: "/api/v1/auth/login",
     register: "/api/v1/auth/register",
@@ -66,5 +66,3 @@ export const apiControl = {
     roles: "/api/v1/enums/roles",
   },
 };
-
-export default apiControl;

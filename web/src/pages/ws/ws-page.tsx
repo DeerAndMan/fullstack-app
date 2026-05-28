@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 
+import { apiPathsV2 } from "@/api/paths/v2";
 import { wsInit } from "@/utils/websocket";
 
 import type { WsFunc } from "@/utils/websocket";
@@ -22,7 +23,7 @@ export const WsPage = () => {
     setWsData(data);
   };
 
-  const ws = useMemo(() => new wsInit<DType>("/api/v2/ws/conversations", { onMessage }).ws, []);
+  const ws = useMemo(() => new wsInit<DType>(apiPathsV2.ws.conversations, { onMessage }).ws, []);
 
   useEffect(() => {
     return () => {

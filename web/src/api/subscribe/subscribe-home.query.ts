@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import z from "zod";
 
-import { apiControl, RequestPost, RequestPut, RequestSchema } from "../";
+import { RequestPost, RequestPut, RequestSchema } from "../";
+import { apiPathsV1 } from "../paths/v1";
 import { useGlobalStore } from "@/stores/global";
 
 import { SubscribeListSchema } from "@/types/xq/subscribe/home";
@@ -17,7 +18,7 @@ export const useQuerySubscribeHome = () => {
     queryFn: async () => {
       const res = await RequestSchema({
         method: "GET",
-        url: apiControl.xq.subscribe.list,
+        url: apiPathsV1.xq.subscribe.list,
         schema: SubscribeListSchema,
       });
       const newData = res.data.map(d => ({ ...d, key: d.id }));
@@ -30,7 +31,7 @@ export const useQuerySubscribeHome = () => {
   const toggleMutation = useMutation({
     mutationFn: (params: { user_id: string; enabled: boolean }) =>
       RequestPut(
-        `${apiControl.xq.subscribe.toggle}/${params.user_id}`,
+        `${apiPathsV1.xq.subscribe.toggle}/${params.user_id}`,
         { enabled: params.enabled },
         { schema: z.object({}).nullable() }
       ),
@@ -44,7 +45,7 @@ export const useQuerySubscribeHome = () => {
 
   const addMutation = useMutation({
     mutationFn: (params: { user_id: number; description?: string }) =>
-      RequestPost(apiControl.xq.subscribe.add, params, {
+      RequestPost(apiPathsV1.xq.subscribe.add, params, {
         schema: z.object({}).nullable(),
       }),
     onError: (error: Error) => {
@@ -58,7 +59,7 @@ export const useQuerySubscribeHome = () => {
   const updateMutation = useMutation({
     mutationFn: (params: { id: string; user_id: string; former_name: string }) =>
       RequestPut(
-        `${apiControl.xq.subscribe.formerName}/${params.id}/${params.user_id}`,
+        `${apiPathsV1.xq.subscribe.formerName}/${params.id}/${params.user_id}`,
         { former_name: params.former_name },
         { schema: z.object({}).nullable() }
       ),

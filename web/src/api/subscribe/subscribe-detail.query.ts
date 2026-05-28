@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import z from "zod";
 
-import { apiControl, RequestSchema } from "../";
+import { RequestSchema } from "../";
+import { apiPathsV1 } from "../paths/v1";
 import { SubscribeItemSchema, ThemeContentItemSchema } from "@/types/xq/subscribe/home";
 
 const DetailTableSchema = z.object({
@@ -22,7 +23,7 @@ export const useQuerySubscribeDetail = (id: string, userId: string) => {
     queryFn: async () => {
       const res = await RequestSchema({
         method: "GET",
-        url: `${apiControl.xq.subscribe.detail}/${id}/${userId}`,
+        url: `${apiPathsV1.xq.subscribe.detail}/${id}/${userId}`,
         schema: SubscribeItemSchema,
       });
       return res;
@@ -35,7 +36,7 @@ export const useQuerySubscribeDetail = (id: string, userId: string) => {
     queryFn: async () => {
       const res = await RequestSchema({
         method: "GET",
-        url: `${apiControl.xq.subscribe.detailTable}/${userId}?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        url: `${apiPathsV1.xq.subscribe.detailTable}/${userId}?pageNumber=${pageNumber}&pageSize=${pageSize}`,
         schema: DetailTableSchema,
       });
       return res;

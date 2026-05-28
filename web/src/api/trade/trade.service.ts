@@ -1,5 +1,6 @@
 import z from "zod";
-import { apiControl, request, RequestSchema } from "../";
+import { request, RequestSchema } from "../";
+import { apiPathsV1 } from "../paths/v1";
 import { TradeItemSchema } from "@/types/schema";
 
 import type { TradeItem } from "@/pages/trade/type";
@@ -10,10 +11,10 @@ import type { TradeParams } from "@/types/schema";
 export const getTrade = (params: TradeParams) =>
   RequestSchema({
     method: "POST",
-    url: apiControl.trade.index,
+    url: apiPathsV1.trade.index,
     data: params,
     schema: z.array(TradeItemSchema),
   });
 
 export const getSummary = (params: TradeParams): PromiseResponseData<TradeItem> =>
-  request.post(apiControl.trade.summary, params);
+  request.post(apiPathsV1.trade.summary, params);

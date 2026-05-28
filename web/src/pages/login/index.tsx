@@ -22,7 +22,7 @@ export const Login = () => {
 
     userApi
       .login({ name: data.username.trim(), password: data.password.trim() }, {})
-      .then((res) => {
+      .then(res => {
         if (res.code === 0 && res.data) {
           setToken(res.data.token.access_token);
           setUser(res.data.user);
@@ -37,13 +37,11 @@ export const Login = () => {
       .catch(() => {});
   };
 
-  const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
+  const onFinish: FormProps<FieldType>["onFinish"] = values => {
     login(values);
   };
 
-  const onFinishFailed: FormProps<FieldType>["onFinishFailed"] = (
-    errorInfo,
-  ) => {
+  const onFinishFailed: FormProps<FieldType>["onFinishFailed"] = errorInfo => {
     console.log("Failed:", errorInfo);
   };
 
@@ -58,9 +56,7 @@ export const Login = () => {
 
       <div className="w-full md:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md bg-gray-50 rounded-lg shadow-md p-8 ">
-          <h2 className="text-xl font-bold text-center text-gray-800 mb-6">
-            用户登录
-          </h2>
+          <h2 className="text-xl font-bold text-center text-gray-800 mb-6">用户登录</h2>
 
           <Form
             name="basic"
@@ -80,7 +76,7 @@ export const Login = () => {
               label="用户名"
               name="username"
               rules={[{ required: true, message: "请输入用户名!" }]}
-              normalize={(value) => value?.trim()}
+              normalize={value => value?.trim()}
             >
               <Input className="rounded dark:bg-gray-700 dark:text-white dark:border-gray-600" />
             </Form.Item>
@@ -89,16 +85,12 @@ export const Login = () => {
               label="密码"
               name="password"
               rules={[{ required: true, message: "请输入密码!" }]}
-              normalize={(value) => value?.trim()}
+              normalize={value => value?.trim()}
             >
               <Input.Password className="rounded dark:bg-gray-700 dark:text-white dark:border-gray-600" />
             </Form.Item>
 
-            <Form.Item<FieldType>
-              name="remember"
-              valuePropName="checked"
-              wrapperCol={{ offset: 8, span: 16 }}
-            >
+            <Form.Item<FieldType> name="remember" valuePropName="checked" wrapperCol={{ offset: 8, span: 16 }}>
               <Checkbox className="dark:text-gray-300">记住我</Checkbox>
             </Form.Item>
 
