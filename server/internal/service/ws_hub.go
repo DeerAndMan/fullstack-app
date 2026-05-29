@@ -1,10 +1,14 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/hertz-contrib/websocket"
+	"go.uber.org/zap"
 )
 
 // wsClient 单个连接的封装。
@@ -25,11 +29,44 @@ func (c *wsClient) writeJSON(data []byte) error {
 type WsHub struct {
 	mu      sync.RWMutex
 	clients map[string]*wsClient
+	ctx     context.Context
+	cancel  context.CancelFunc
 }
 
-// NewWsHub 创建一个空的 Hub。
+// NewWsHub 创建一个空的 Hub 并启动后台轮询任务。
 func NewWsHub() *WsHub {
-	return &WsHub{clients: make(map[string]*wsClient)}
+	ctx, cancel := context.WithCancel(context.Background())
+	hub := &WsHub{
+		clients: make(map[string]*wsClient),
+		ctx:     ctx,
+		cancel:  cancel,
+	}
+	go hub.startPolling()
+	return hub
+}
+
+// startPolling 后台轮询任务：只要有连接，每 30 秒推送一次随机 ID + 当前时间。
+func (h *WsHub) startPolling() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-h.ctx.Done():
+			return
+		case <-ticker.C:
+			// 只有在有连接时才推送
+			if h.Count() > 0 {
+				payload := map[string]interface{}{
+					"id":        uuid.NewString(),
+					"timestamp": time.Now().Format("2006-01-02 15:04:05"),
+					"type":      "heartbeat",
+				}
+				h.Broadcast(payload)
+				zap.L().Info("ws heartbeat sent", zap.Int("online", h.Count()))
+			}
+		}
+	}
 }
 
 // Register 注册一条新连接，已存在同名 key 会替换并关闭旧连接。
@@ -107,4 +144,9 @@ func (h *WsHub) Count() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.clients)
+}
+
+// Stop 停止后台轮询任务，用于优雅关闭。
+func (h *WsHub) Stop() {
+	h.cancel()
 }
