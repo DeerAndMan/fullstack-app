@@ -6,7 +6,7 @@ mysql:
   host: 127.0.0.1
   port: 3306
   username: root
-  password: "123456789"
+  password: "cc~@_1982_(?+?*Q-P=!!)"
   database: energytest
   max_idle_conns: 10
   max_open_conns: 100
