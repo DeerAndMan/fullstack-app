@@ -51,7 +51,7 @@ type PageResult struct {
 	List     any   `json:"list"`
 	Total    int64 `json:"total"`
 	Page     int   `json:"page"`
-	PageSize int   `json:"page_size"`
+	PageSize int   `json:"pageSize"`
 }
 
 func OKWithPage(ctx context.Context, c *app.RequestContext, list any, total int64, page, pageSize int) {

@@ -3,8 +3,8 @@ import { Button, Modal, Tree } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 
 import { navRouter } from "@/router";
-import { addMenuRouter } from "@/api/menu-router";
-import { menuListQuery } from "@/hooks/query/use-query-menu";
+import { addMenuRouter } from "@/api/menu/menu.service";
+import { menuListQuery } from "@/api/menu";
 
 import type { TreeDataNode, TreeProps } from "antd";
 import type { NavRouter, TreeDataType } from "@/router";

@@ -3,7 +3,7 @@ import { Button } from "antd";
 
 import { useAuthStore } from "@/stores/auth";
 import { useGlobalStore } from "@/stores/global";
-import { tradeListQuery } from "@/hooks/query/use-query-trade";
+import { tradeListQuery } from "@/api/trade";
 
 export const Home = () => {
   const navigate = useNavigate();

@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button, Checkbox, Form, Input } from "antd";
 import { toast } from "react-toastify";
-import { encryptPassword, setAuthCookie } from "@/utils";
+import { setAuthCookie } from "@/utils";
 import { useAuthStore } from "@/stores/auth";
 import { userApi } from "@/api";
 
@@ -19,22 +19,22 @@ export const Login = () => {
 
   const login = (data: FieldType) => {
     if (!data.username || !data.password) return;
-    const encryptedPassword = encryptPassword(data.password.trim(), 21);
 
     userApi
-      .login({ username: data.username.trim(), password: encryptedPassword }, { saltLength: 21 })
+      .login({ name: data.username.trim(), password: data.password.trim() }, {})
       .then(res => {
         if (res.code === 0 && res.data) {
-          setToken(res.data.token);
+          setToken(res.data.token.access_token);
           setUser(res.data.user);
           setRole(res.data.role);
           setMenuRoles(res.data.menuRoles);
-          setAuthCookie(res.data.token);
+          setAuthCookie(res.data.token.access_token);
           navigator("/", { replace: true });
         } else {
           toast.error(res.msg);
         }
-      });
+      })
+      .catch(() => {});
   };
 
   const onFinish: FormProps<FieldType>["onFinish"] = values => {
@@ -90,11 +90,7 @@ export const Login = () => {
               <Input.Password className="rounded dark:bg-gray-700 dark:text-white dark:border-gray-600" />
             </Form.Item>
 
-            <Form.Item<FieldType>
-              name="remember"
-              valuePropName="checked"
-              wrapperCol={{ offset: 8, span: 16 }}
-            >
+            <Form.Item<FieldType> name="remember" valuePropName="checked" wrapperCol={{ offset: 8, span: 16 }}>
               <Checkbox className="dark:text-gray-300">记住我</Checkbox>
             </Form.Item>
 

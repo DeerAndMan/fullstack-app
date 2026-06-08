@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Form, Input, Modal, Switch, Table } from "antd";
 
-import { useQuerySubscribeHome } from "@/hooks/query/subscribe";
+import { useQuerySubscribeHome } from "@/api/subscribe";
 
 import type { SubscribeItem } from "@/types/xq/subscribe/home";
 

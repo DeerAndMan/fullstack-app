@@ -27,8 +27,10 @@ func Logger() app.HandlerFunc {
 			zap.String("ip", c.ClientIP()),
 		}
 
-		if reqID := string(c.GetHeader("X-Request-ID")); reqID != "" {
-			fields = append(fields, zap.String("request_id", reqID))
+		if v, exists := c.Get("request_id"); exists {
+			if reqID, ok := v.(string); ok && reqID != "" {
+				fields = append(fields, zap.String("request_id", reqID))
+			}
 		}
 
 		if status >= 500 {
