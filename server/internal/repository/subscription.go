@@ -48,6 +48,15 @@ func (r *SubscriptionRepository) UpdateEnabled(userID int64, enabled bool) (int6
 	return result.RowsAffected, result.Error
 }
 
+// 校验用户ID是否存在
+func (r *SubscriptionRepository) ExistsByUserID(userID int64) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.XqSubscription{}).
+		Where("user_id = ?", userID).
+		Count(&count).Error
+	return count > 0, err
+}
+
 func (r *SubscriptionRepository) Exists(id, userID int64) (bool, error) {
 	var count int64
 	err := r.db.Model(&model.XqSubscription{}).
