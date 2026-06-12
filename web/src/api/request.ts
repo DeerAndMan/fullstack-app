@@ -50,10 +50,10 @@ export type PageData<T> = {
 
 axiosRetry(request, {
   retries: 3,
-  retryDelay: (retryCount) => {
+  retryDelay: retryCount => {
     return retryCount * 1000;
   },
-  retryCondition: (error) => {
+  retryCondition: error => {
     const config = error.config as CustomRequestConfig;
     return !!config.needRetry && error.response?.status === 500;
   },
@@ -140,7 +140,7 @@ request.interceptors.response.use(
     }
 
     return Promise.reject(err?.response?.data || "出错啦");
-  },
+  }
 );
 
 export default request;
