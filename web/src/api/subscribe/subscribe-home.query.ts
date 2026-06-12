@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import z from "zod";
 
-import { RequestPost, RequestPut, RequestSchema } from "../";
+import { RequestDelete, RequestPost, RequestPut, RequestSchema } from "../";
 import { apiPathsV1 } from "../paths/v1";
 import { useGlobalStore } from "@/stores/global";
 
@@ -71,5 +71,21 @@ export const useQuerySubscribeHome = () => {
     },
   });
 
-  return { queryList, toggleMutation, addMutation, updateMutation };
+  const deleteMutation = useMutation({
+    mutationFn: (params: { id: string; user_id: string }) =>
+      RequestDelete(`${apiPathsV1.xq.subscribe.delete}/${params.id}/${params.user_id}`, {
+        schema: z.object({}).nullable(),
+      }),
+    onSuccess: () => {
+      messageApi?.success("订阅删除成功");
+    },
+    onError: (error: Error) => {
+      messageApi?.error(error.message || "删除订阅失败");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey, exact: true });
+    },
+  });
+
+  return { queryList, toggleMutation, addMutation, updateMutation, deleteMutation };
 };

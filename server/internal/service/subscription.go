@@ -50,6 +50,14 @@ func (s *SubscriptionService) Create(sub *model.XqSubscription) (*model.XqSubscr
 	if sub.UserID == 0 {
 		return nil, errcode.ErrBadRequest
 	}
+	// 校验 UserID 是否重复，已存在则提示
+	exists, err := s.subRepo.ExistsByUserID(sub.UserID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+	if exists {
+		return nil, errcode.ErrSubscriptionDuplicate
+	}
 	sub.ID = snowflake.NextID()
 	if err := s.subRepo.Create(sub); err != nil {
 		return nil, errcode.ErrInternal

@@ -1,16 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Form, Input, Modal, Switch, Table } from "antd";
+import { Button, Form, Input, Modal, Popconfirm, Switch, Table } from "antd";
 
 import { useQuerySubscribeHome } from "@/api/subscribe";
+import { useAuthStore } from "@/stores/auth";
+import { RoleKey } from "@/types/enum";
 
 import type { SubscribeItem } from "@/types/xq/subscribe/home";
 
 export default function HomeTable() {
-  const { queryList, toggleMutation, updateMutation } = useQuerySubscribeHome();
+  const { queryList, toggleMutation, updateMutation, deleteMutation } = useQuerySubscribeHome();
   const [editingRecord, setEditingRecord] = useState<SubscribeItem | null>(null);
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const role = useAuthStore(s => s.role);
+  const isSuperAdmin = role?.role_key === RoleKey.SUPER_ADMIN;
 
   const handleEdit = (record: SubscribeItem) => {
     setEditingRecord(record);
@@ -69,7 +73,7 @@ export default function HomeTable() {
           {
             title: "操作",
             key: "action",
-            width: 160,
+            width: 220,
             render: (_, record: SubscribeItem) => (
               <>
                 <Button type="link" size="small" onClick={() => handleEdit(record)}>
@@ -82,6 +86,20 @@ export default function HomeTable() {
                 >
                   详情
                 </Button>
+                {isSuperAdmin && (
+                  <Popconfirm
+                    title="删除订阅"
+                    description={`确认删除订阅「${record.description || record.user_id}」？该操作不可恢复。`}
+                    okText="确认删除"
+                    cancelText="取消"
+                    okButtonProps={{ danger: true, loading: deleteMutation.isPending }}
+                    onConfirm={() => deleteMutation.mutate({ id: String(record.id), user_id: String(record.user_id) })}
+                  >
+                    <Button type="link" size="small" danger>
+                      删除
+                    </Button>
+                  </Popconfirm>
+                )}
               </>
             ),
           },
