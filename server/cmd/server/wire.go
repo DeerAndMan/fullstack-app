@@ -11,6 +11,7 @@ import (
 	jwtpkg "fullstack-app/server/pkg/jwt"
 	"fullstack-app/server/pkg/upload"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -21,7 +22,7 @@ type AppDeps struct {
 	WsHub *service.WsHub
 }
 
-func initHandlers(db *gorm.DB, jwtManager *jwtpkg.Manager, uploader *upload.Uploader, cfg *config.Config) *AppDeps {
+func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, uploader *upload.Uploader, cfg *config.Config) *AppDeps {
 	// Repository
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
@@ -32,7 +33,7 @@ func initHandlers(db *gorm.DB, jwtManager *jwtpkg.Manager, uploader *upload.Uplo
 	tcRepo := repository.NewThemeContentRepository(db)
 
 	// Service
-	authSvc := service.NewAuthService(userRepo, jwtManager)
+	authSvc := service.NewAuthService(userRepo, jwtManager, rdb)
 	userSvc := service.NewUserService(userRepo, roleRepo)
 	roleSvc := service.NewRoleService(roleRepo)
 	uploadSvc := service.NewUploadService(uploader)
