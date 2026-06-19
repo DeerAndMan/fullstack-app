@@ -1,4 +1,10 @@
-.PHONY: dev dev-web dev-server build build-web build-server test lint clean
+.PHONY: dev dev-web dev-server dev-server-remote build build-web build-server test lint clean
+
+# ── 远程数据库配置 ────────────────────────────────────────
+# 远程连接信息从 server/.env.remote.local 读取（该文件被 .gitignore 忽略，不进版本库）
+# 首次使用：cp server/.env.remote.local.example server/.env.remote.local，再填入真实地址/密码
+# 用法：make dev-server-remote
+REMOTE_ENV_FILE = server/.env.remote.local
 
 # ── Development ──────────────────────────────────────────
 dev:
@@ -11,6 +17,12 @@ dev-web:
 
 dev-server:
 	cd server && air
+
+# 连接远程数据库启动后端（不依赖本地 docker MySQL）
+# 通过 set -a 把 env 文件里的变量全部导出为环境变量，由 Viper 的 APP_ 前缀覆盖 config.yaml
+dev-server-remote:
+	@test -f $(REMOTE_ENV_FILE) || { echo "缺少 $(REMOTE_ENV_FILE)，请先复制 $(REMOTE_ENV_FILE).example 并填写"; exit 1; }
+	cd server && set -a && . ./.env.remote.local && set +a && air
 
 # ── Build ────────────────────────────────────────────────
 build: build-web build-server

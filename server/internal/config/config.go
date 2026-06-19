@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -74,6 +75,8 @@ func Load(path string) (*Config, error) {
 	v := viper.New()
 	v.SetConfigFile(path)
 	v.SetEnvPrefix("APP")
+	// 将嵌套 key 的点替换为下划线，使 APP_MYSQL_HOST 这类环境变量能覆盖 mysql.host
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
