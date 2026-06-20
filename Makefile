@@ -1,4 +1,4 @@
-.PHONY: dev dev-web dev-server dev-server-remote build build-web build-server test lint clean
+.PHONY: dev dev-web dev-server dev-server-remote build build-web build-server build-linux test lint clean
 
 # ── 远程数据库配置 ────────────────────────────────────────
 # 远程连接信息从 server/.env.remote.local 读取（该文件被 .gitignore 忽略，不进版本库）
@@ -32,6 +32,10 @@ build-web:
 
 build-server:
 	cd server && CGO_ENABLED=0 go build -o bin/server ./cmd/server
+
+# 交叉编译 Linux x86_64 发布二进制（产物：server/bin/server-linux）
+build-linux:
+	cd server && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/server-linux ./cmd/server
 
 # ── Test ─────────────────────────────────────────────────
 test:
