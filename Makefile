@@ -31,7 +31,7 @@ build-web:
 	cd web && pnpm build
 
 build-server:
-	cd server && CGO_ENABLED=0 go build -o bin/server cmd/server/main.go
+	cd server && CGO_ENABLED=0 go build -o bin/server ./cmd/server
 
 # ── Test ─────────────────────────────────────────────────
 test:
