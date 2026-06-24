@@ -19,6 +19,7 @@ const (
 	CtxUsernameKey      = "username"
 )
 
+// jwt验证中间件
 func JWTAuth(jwtManager *jwtpkg.Manager) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
 		auth := string(c.GetHeader(HeaderAuthorization))

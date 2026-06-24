@@ -27,8 +27,8 @@ type Handlers struct {
 
 func (h *Handlers) Register(srv *server.Hertz, jwtManager *jwtpkg.Manager) {
 	apiV1 := srv.Group("/api/v1")
-	protectedV1 := apiV1.Group("")
-	protectedV1.Use(middleware.JWTAuth(jwtManager))
+	protectedV1 := apiV1.Group("")                  // 受保护组
+	protectedV1.Use(middleware.JWTAuth(jwtManager)) // 添加 JWT 验证中间件
 	RegisterRoutes(apiV1, protectedV1, h)
 }
 
