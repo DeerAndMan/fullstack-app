@@ -8,8 +8,11 @@ REMOTE_ENV_FILE = server/.env.remote.local
 
 # ── Development ──────────────────────────────────────────
 dev:
-	docker compose up -d mysql redis
-	@echo "MySQL & Redis started"
+	@if command -v docker >/dev/null 2>&1; then \
+		docker compose up -d mysql redis && echo "MySQL & Redis started"; \
+	else \
+		echo "未检测到 docker，跳过启动 MySQL/Redis（请确保数据库已可用，如连远程库）"; \
+	fi
 	$(MAKE) -j2 dev-web dev-server
 
 dev-web:
