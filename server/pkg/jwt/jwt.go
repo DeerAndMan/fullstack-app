@@ -27,11 +27,11 @@ type TokenPair struct {
 	ExpiresAt    int64  `json:"expires_at"`
 }
 
-func NewManager(secret string, accessExpireHours, refreshExpireHours int, issuer string) *Manager {
+func NewManager(secret string, accessExpireHours, refreshExpireHours float64, issuer string) *Manager {
 	return &Manager{
 		secret:        []byte(secret),
-		accessExpire:  time.Duration(accessExpireHours) * time.Hour,
-		refreshExpire: time.Duration(refreshExpireHours) * time.Hour,
+		accessExpire:  time.Duration(accessExpireHours * float64(time.Hour)),
+		refreshExpire: time.Duration(refreshExpireHours * float64(time.Hour)),
 		issuer:        issuer,
 	}
 }

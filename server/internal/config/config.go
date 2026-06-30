@@ -55,10 +55,10 @@ func (c *RedisConfig) Addr() string {
 }
 
 type JWTConfig struct {
-	Secret        string `mapstructure:"secret"`
-	AccessExpire  int    `mapstructure:"access_expire"`  // hours
-	RefreshExpire int    `mapstructure:"refresh_expire"` // hours
-	Issuer        string `mapstructure:"issuer"`
+	Secret        string  `mapstructure:"secret"`
+	AccessExpire  float64 `mapstructure:"access_expire"`  // 单位：小时，支持小数（如 0.1 表示 6 分钟）
+	RefreshExpire float64 `mapstructure:"refresh_expire"` // 单位：小时，支持小数
+	Issuer        string  `mapstructure:"issuer"`
 }
 
 type UploadConfig struct {
