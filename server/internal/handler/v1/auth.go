@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"strings"
 
 	"fullstack-app/server/internal/service"
 	"fullstack-app/server/pkg/errcode"
@@ -78,7 +79,11 @@ func (h *AuthHandler) RefreshToken(ctx context.Context, c *app.RequestContext) {
 }
 
 func (h *AuthHandler) Logout(ctx context.Context, c *app.RequestContext) {
-	if err := h.authSvc.Logout(); err != nil {
+	// 从 Authorization 头取出 access 令牌用于吊销
+	auth := string(c.GetHeader("Authorization"))
+	accessToken := strings.TrimPrefix(auth, "Bearer ")
+
+	if err := h.authSvc.Logout(accessToken); err != nil {
 		response.Fail(ctx, c, errcode.ErrInternal)
 		return
 	}

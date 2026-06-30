@@ -19,7 +19,8 @@ const (
 	CtxUsernameKey      = "username"
 )
 
-// jwt验证中间件
+// JWTAuth 鉴权中间件：校验 Authorization 头中的不透明令牌，
+// 通过 jwtManager 查 Redis 还原会话，并把用户信息写入请求上下文
 func JWTAuth(jwtManager *jwtpkg.Manager) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
 		auth := string(c.GetHeader(HeaderAuthorization))

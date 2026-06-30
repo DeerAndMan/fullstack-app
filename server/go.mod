@@ -6,7 +6,6 @@ require (
 	github.com/casbin/casbin/v2 v2.103.0
 	github.com/cloudwego/hertz v0.9.4-0.20241021100040-3477b0309b81
 	github.com/fatih/color v1.19.0
-	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/hertz-contrib/websocket v0.2.0
 	github.com/jinzhu/copier v0.4.0

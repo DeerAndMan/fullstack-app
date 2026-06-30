@@ -22,10 +22,8 @@ redis:
   db: 0
 
 jwt:
-  secret: "change-me-in-production-use-a-strong-secret"
   access_expire: 24
   refresh_expire: 168
-  issuer: "fullstack-app"
 
 upload:
   path: "./uploads"

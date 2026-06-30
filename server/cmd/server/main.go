@@ -73,12 +73,11 @@ func main() {
 		zap.L().Fatal("connect redis failed", zap.Error(err))
 	}
 
-	// JWT
+	// JWT（不透明令牌，会话存储于 Redis）
 	jwtManager := jwtpkg.NewManager(
-		cfg.JWT.Secret,
+		rdb,
 		cfg.JWT.AccessExpire,
 		cfg.JWT.RefreshExpire,
-		cfg.JWT.Issuer,
 	)
 
 	// Uploader
