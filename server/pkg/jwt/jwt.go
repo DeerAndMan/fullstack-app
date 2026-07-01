@@ -16,6 +16,7 @@ import (
 type Claims struct {
 	UserID    uint   `json:"user_id"`
 	LoginAt   int64  `json:"login_at"`   // 登录时间（Unix 秒）
+	ExpiresAt int64  `json:"expires_at"` // 逻辑过期时间（Unix 秒），用于判断是否临近过期
 	TokenType string `json:"token_type"` // "access" or "refresh"
 }
 
@@ -42,6 +43,9 @@ type TokenPair struct {
 const (
 	accessKeyPrefix  = "session:access:"  // access 令牌会话前缀
 	refreshKeyPrefix = "session:refresh:" // refresh 令牌会话前缀
+
+	// renewThreshold 滑动续期阈值：access 剩余有效期不足总时长该比例时签发新令牌。
+	renewThreshold = 0.3
 )
 
 // NewManager 构造令牌管理器。令牌信息存储于 Redis，令牌本身仅为不透明随机串。
@@ -124,7 +128,7 @@ func (m *Manager) parse(keyPrefix, tokenStr, tokenType string) (*Claims, error) 
 		return nil, errors.New("token expired")
 	}
 
-	return &Claims{UserID: sd.UserID, LoginAt: sd.LoginAt, TokenType: tokenType}, nil
+	return &Claims{UserID: sd.UserID, LoginAt: sd.LoginAt, ExpiresAt: sd.ExpiresAt, TokenType: tokenType}, nil
 }
 
 func (m *Manager) ParseAccessToken(tokenStr string) (*Claims, error) {
@@ -141,4 +145,50 @@ func (m *Manager) Revoke(accessToken string) error {
 		return nil
 	}
 	return m.rdb.Del(context.Background(), accessKeyPrefix+accessToken).Err()
+}
+
+// issueAccessToken 仅签发一个新的 access 令牌并写入 Redis（不动 refresh）。
+// 用于滑动续期：续期只延长 access 生命周期，refresh 保持不变。
+func (m *Manager) issueAccessToken(userID uint, loginAt int64) (string, int64, error) {
+	now := time.Now()
+	accessExpAt := now.Add(m.accessExpire)
+
+	token, err := randToken()
+	if err != nil {
+		return "", 0, err
+	}
+	val, err := json.Marshal(sessionData{UserID: userID, LoginAt: loginAt, ExpiresAt: accessExpAt.Unix()})
+	if err != nil {
+		return "", 0, err
+	}
+	// 与 GenerateTokenPair 保持一致：access 会话 key 存活到 refresh 过期，
+	// 逻辑过期时间记录在 value 里。
+	if err := m.rdb.Set(context.Background(), accessKeyPrefix+token, val, m.refreshExpire).Err(); err != nil {
+		return "", 0, fmt.Errorf("write access session: %w", err)
+	}
+	return token, accessExpAt.Unix(), nil
+}
+
+// MaybeRenewAccessToken 在 access 令牌临近过期时签发一个新令牌用于无感续期。
+// 当剩余有效期不足 access 总时长的 renewThreshold 比例时才续期。
+// 返回空串表示无需续期。旧令牌不主动吊销，交由其自然过期，避免前端并发请求竞态。
+func (m *Manager) MaybeRenewAccessToken(claims *Claims) (newToken string, err error) {
+	if claims == nil || claims.TokenType != "access" {
+		return "", nil
+	}
+	// 剩余有效期（秒）
+	remaining := claims.ExpiresAt - time.Now().Unix()
+	if remaining <= 0 {
+		return "", nil // 已过期不会走到这里，兜底
+	}
+	// 阈值：剩余不足总时长的 30% 时续期
+	threshold := int64(m.accessExpire.Seconds() * renewThreshold)
+	if remaining > threshold {
+		return "", nil
+	}
+	token, _, err := m.issueAccessToken(claims.UserID, claims.LoginAt)
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
