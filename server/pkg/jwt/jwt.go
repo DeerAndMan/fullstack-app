@@ -24,7 +24,7 @@ type Claims struct {
 type sessionData struct {
 	UserID    uint   `json:"uid"`
 	Username  string `json:"name"`
-	ExpiresAt int64  `json:"exp"` // 逻辑过期时间（Unix 秒），用于区分 expired 与 invalid
+	ExpiresAt int64  `json:"expires_at"` // 逻辑过期时间（Unix 秒），用于区分 expired 与 invalid
 }
 
 type Manager struct {
@@ -40,8 +40,8 @@ type TokenPair struct {
 }
 
 const (
-	accessKeyPrefix  = "session:a:" // access 令牌会话前缀
-	refreshKeyPrefix = "session:r:" // refresh 令牌会话前缀
+	accessKeyPrefix  = "session:access:"  // access 令牌会话前缀
+	refreshKeyPrefix = "session:refresh:" // refresh 令牌会话前缀
 )
 
 // NewManager 构造令牌管理器。令牌信息存储于 Redis，令牌本身仅为不透明随机串。
