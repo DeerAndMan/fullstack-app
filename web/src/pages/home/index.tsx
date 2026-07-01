@@ -4,6 +4,7 @@ import { Button } from "antd";
 import { useAuthStore } from "@/stores/auth";
 import { useGlobalStore } from "@/stores/global";
 import { tradeListQuery } from "@/api/trade";
+import { toPercent } from "@/utils/number";
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export const Home = () => {
   return (
     <div className="relative">
       <div className="text-sm font-bold min-h-192 text-primary">
-        总结：{Number(last?.drhz) * 100}
+        总结：{toPercent(last?.drhz)}
         &nbsp; &nbsp;
         {last?.dryk}
       </div>

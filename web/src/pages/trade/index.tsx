@@ -4,6 +4,7 @@ import { Button, Space, Switch, DatePicker, Card } from "antd";
 import dayjs from "dayjs";
 import { DualAxesChart, LineChart } from "@/components";
 import { tradeListQuery } from "@/api/trade";
+import { times } from "@/utils/number";
 
 import type { RangePickerProps } from "antd/es/date-picker";
 import type { EnergyItem } from "./type";
@@ -40,7 +41,7 @@ export default function Trade() {
 
     queryList.data.data.forEach(l => {
       const time = dayjs(l.date).format("YYYY-MM-DD HH:mm:ss");
-      list.push({ time, value: Number(l.dryk), proportion: Number(l.drhz) * 100 });
+      list.push({ time, value: Number(l.dryk), proportion: times(l.drhz, 100) });
 
       l.positions.forEach(p => {
         listType.push({ time, type: p.Zqmc, value: Number(p.Dryk), total: p });

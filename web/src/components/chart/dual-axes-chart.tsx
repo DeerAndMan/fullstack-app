@@ -1,6 +1,8 @@
 import { DualAxes } from "@ant-design/charts";
 import { useMemo } from "react";
 
+import { formatNumber } from "@/utils/number";
+
 interface DualAxesDataItem {
   time: string;
   value: number;
@@ -87,11 +89,11 @@ export default function DualAxesChart(props: DualAxesProps) {
               proportionMinMax.minTime === datum.time ||
               proportionMinMax.maxTime === datum.time
             ) {
-              return `${datum.proportion.toFixed(2)}%`;
+              return `${formatNumber(datum.proportion)}%`;
             }
             if (isLast.time !== datum.time) return "";
 
-            return `${datum.proportion.toFixed(2)}%`;
+            return `${formatNumber(datum.proportion)}%`;
           },
           style: { dy: -15, textAlign: "middle" },
         },
