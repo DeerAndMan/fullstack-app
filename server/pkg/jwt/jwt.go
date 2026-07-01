@@ -15,16 +15,16 @@ import (
 // Claims 解析令牌后得到的会话声明（从 Redis 反序列化而来）
 type Claims struct {
 	UserID    uint   `json:"user_id"`
-	Username  string `json:"username"`
+	LoginAt   int64  `json:"login_at"`   // 登录时间（Unix 秒）
 	TokenType string `json:"token_type"` // "access" or "refresh"
 }
 
 // sessionData Redis 中实际存储的会话详情。
 // 令牌本身是不透明随机串，所有用户信息都保存在这里。
 type sessionData struct {
-	UserID    uint   `json:"uid"`
-	Username  string `json:"name"`
-	ExpiresAt int64  `json:"expires_at"` // 逻辑过期时间（Unix 秒），用于区分 expired 与 invalid
+	UserID    uint  `json:"uid"`
+	LoginAt   int64 `json:"login_at"`   // 登录时间（Unix 秒）
+	ExpiresAt int64 `json:"expires_at"` // 逻辑过期时间（Unix 秒），用于区分 expired 与 invalid
 }
 
 type Manager struct {
@@ -63,7 +63,8 @@ func randToken() (string, error) {
 }
 
 // GenerateTokenPair 为给定用户生成新的访问和刷新令牌对，并把会话写入 Redis。
-func (m *Manager) GenerateTokenPair(userID uint, username string) (*TokenPair, error) {
+// loginAt 为登录时间（Unix 秒）：首次登录传当前时间，刷新令牌时传原会话的登录时间以保留语义。
+func (m *Manager) GenerateTokenPair(userID uint, loginAt int64) (*TokenPair, error) {
 	ctx := context.Background()
 	now := time.Now()
 	accessExpAt := now.Add(m.accessExpire)
@@ -80,7 +81,7 @@ func (m *Manager) GenerateTokenPair(userID uint, username string) (*TokenPair, e
 
 	// access 会话：Redis key 存活到 refresh 过期，便于区分 expired/invalid；
 	// value 中记录逻辑过期时间 exp，解析时据此判断是否过期。
-	accessVal, err := json.Marshal(sessionData{UserID: userID, Username: username, ExpiresAt: accessExpAt.Unix()})
+	accessVal, err := json.Marshal(sessionData{UserID: userID, LoginAt: loginAt, ExpiresAt: accessExpAt.Unix()})
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +90,7 @@ func (m *Manager) GenerateTokenPair(userID uint, username string) (*TokenPair, e
 	}
 
 	// refresh 会话：TTL 即为 refresh 过期时长。
-	refreshVal, err := json.Marshal(sessionData{UserID: userID, Username: username, ExpiresAt: refreshExpAt.Unix()})
+	refreshVal, err := json.Marshal(sessionData{UserID: userID, LoginAt: loginAt, ExpiresAt: refreshExpAt.Unix()})
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +124,7 @@ func (m *Manager) parse(keyPrefix, tokenStr, tokenType string) (*Claims, error) 
 		return nil, errors.New("token expired")
 	}
 
-	return &Claims{UserID: sd.UserID, Username: sd.Username, TokenType: tokenType}, nil
+	return &Claims{UserID: sd.UserID, LoginAt: sd.LoginAt, TokenType: tokenType}, nil
 }
 
 func (m *Manager) ParseAccessToken(tokenStr string) (*Claims, error) {

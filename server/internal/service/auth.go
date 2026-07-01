@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	"fullstack-app/server/internal/model"
 	"fullstack-app/server/internal/repository"
@@ -98,7 +99,7 @@ func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 	}
 
 	// 生成不透明令牌对（会话信息由 jwtManager 写入 Redis）
-	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, user.Name)
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, time.Now().Unix())
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
@@ -142,7 +143,8 @@ func (s *AuthService) RefreshToken(req *RefreshTokenRequest) (*jwtpkg.TokenPair,
 		return nil, errcode.ErrTokenInvalid
 	}
 
-	return s.jwtManager.GenerateTokenPair(claims.UserID, claims.Username)
+	// 刷新时保留原会话的登录时间，语义上仍是同一次登录
+	return s.jwtManager.GenerateTokenPair(claims.UserID, claims.LoginAt)
 }
 
 func (s *AuthService) Logout(accessToken string) error {

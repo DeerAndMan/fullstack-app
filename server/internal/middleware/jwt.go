@@ -16,7 +16,7 @@ const (
 	HeaderAuthorization = "Authorization"
 	BearerPrefix        = "Bearer "
 	CtxUserIDKey        = "user_id"
-	CtxUsernameKey      = "username"
+	CtxLoginAtKey       = "login_at"
 )
 
 // JWTAuth 鉴权中间件：校验 Authorization 头中的不透明令牌，
@@ -47,7 +47,7 @@ func JWTAuth(jwtManager *jwtpkg.Manager) app.HandlerFunc {
 		}
 
 		c.Set(CtxUserIDKey, claims.UserID)
-		c.Set(CtxUsernameKey, claims.Username)
+		c.Set(CtxLoginAtKey, claims.LoginAt)
 		c.Next(ctx)
 	}
 }
@@ -58,8 +58,8 @@ func GetUserID(c *app.RequestContext) uint {
 	return id
 }
 
-func GetUsername(c *app.RequestContext) string {
-	v, _ := c.Get(CtxUsernameKey)
-	s, _ := v.(string)
-	return s
+func GetLoginAt(c *app.RequestContext) int64 {
+	v, _ := c.Get(CtxLoginAtKey)
+	t, _ := v.(int64)
+	return t
 }
