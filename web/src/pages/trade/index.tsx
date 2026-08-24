@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, Space, Switch, DatePicker, Card } from "antd";
-
 import dayjs from "dayjs";
+
 import { DualAxesChart, LineChart } from "@/components";
 import { tradeListQuery } from "@/api/trade";
 import { times } from "@/utils/number";
+import { useGlobalStore } from "@/stores/global";
 
 import type { RangePickerProps } from "antd/es/date-picker";
 import type { EnergyItem } from "./type";
-import { useGlobalStore } from "@/stores/global";
 
 interface LineItem {
   time: string;
