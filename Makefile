@@ -8,10 +8,14 @@ REMOTE_ENV_FILE = server/.env.remote.local
 
 # ── Development ──────────────────────────────────────────
 dev:
-	@if command -v docker >/dev/null 2>&1; then \
-		docker compose up -d mysql redis && echo "MySQL & Redis started"; \
+	@if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then \
+		if docker compose up -d mysql redis; then \
+			echo "MySQL & Redis started"; \
+		else \
+			echo "警告：Docker Compose 启动 MySQL/Redis 失败，继续启动前后端"; \
+		fi; \
 	else \
-		echo "未检测到 docker，跳过启动 MySQL/Redis（请确保数据库已可用，如连远程库）"; \
+		echo "未检测到正在运行的 Docker，跳过启动 MySQL/Redis（请确保数据库已可用，如连远程库）"; \
 	fi
 	$(MAKE) -j2 dev-web dev-server
 
@@ -19,13 +23,13 @@ dev-web:
 	cd web && pnpm dev
 
 dev-server:
-	cd server && air
+	cd server && $(MAKE) dev
 
 # 连接远程数据库启动后端（不依赖本地 docker MySQL）
 # 通过 set -a 把 env 文件里的变量全部导出为环境变量，由 Viper 的 APP_ 前缀覆盖 config.yaml
 dev-server-remote:
 	@test -f $(REMOTE_ENV_FILE) || { echo "缺少 $(REMOTE_ENV_FILE)，请先复制 $(REMOTE_ENV_FILE).example 并填写"; exit 1; }
-	cd server && set -a && . ./.env.remote.local && set +a && air
+	cd server && set -a && . ./.env.remote.local && set +a && $(MAKE) dev
 
 # ── Build ────────────────────────────────────────────────
 build: build-web build-server
