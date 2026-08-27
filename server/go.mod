@@ -3,6 +3,7 @@ module fullstack-app/server
 go 1.25.0
 
 require (
+	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/casbin/casbin/v2 v2.103.0
 	github.com/cloudwego/hertz v0.9.4-0.20241021100040-3477b0309b81
 	github.com/fatih/color v1.19.0
@@ -55,6 +56,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
