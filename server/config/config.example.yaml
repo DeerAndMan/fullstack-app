@@ -43,3 +43,4 @@ cors:
     - "http://localhost:7878"
     - "http://127.0.0.1:7878"
     - "https://full.dragot.dpdns.org"
+    - "https://xueqiu.com"

@@ -23,6 +23,12 @@ func CORS(allowOrigins []string) app.HandlerFunc {
 		c.Header("Access-Control-Expose-Headers", "Content-Length, Content-Type, x-new-token")
 		c.Header("Access-Control-Max-Age", "86400")
 
+		// Chrome 私有网络访问（PNA）：公网页面请求 localhost 时，预检会带
+		// Access-Control-Request-Private-Network: true，必须回应此头才放行
+		if string(c.GetHeader("Access-Control-Request-Private-Network")) == "true" {
+			c.Header("Access-Control-Allow-Private-Network", "true")
+		}
+
 		if string(c.Method()) == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
