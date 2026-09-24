@@ -16,6 +16,7 @@ type Handlers struct {
 	Upload       *handlerv1.UploadHandler
 	Energy       *handlerv1.EnergyHandler
 	Trade        *handlerv1.TradeHandler
+	TradeStats   *handlerv1.TradeStatsHandler
 	JyData       *handlerv1.JyDataHandler
 	Sse          *handlerv1.SseHandler
 	Ai           *handlerv1.AiHandler
@@ -39,6 +40,7 @@ func RegisterRoutes(public *route.RouterGroup, protected *route.RouterGroup, h *
 	registerUploadRoutes(protected, h.Upload)
 	registerEnergyRoutes(public, h.Energy)
 	registerTradeRoutes(protected, h.Trade)
+	registerTradeStatsRoutes(protected, h.TradeStats)
 	registerJyDataRoutes(public, h.JyData)
 	registerSseRoutes(public, h.Sse)
 	registerAiRoutes(public, h.Ai)

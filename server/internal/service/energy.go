@@ -13,14 +13,16 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/jinzhu/copier"
+	"go.uber.org/zap"
 )
 
 type EnergyService struct {
 	energyRepo *repository.EnergyRepository
+	statsSvc   *TradeStatsService
 }
 
-func NewEnergyService(energyRepo *repository.EnergyRepository) *EnergyService {
-	return &EnergyService{energyRepo: energyRepo}
+func NewEnergyService(energyRepo *repository.EnergyRepository, statsSvc *TradeStatsService) *EnergyService {
+	return &EnergyService{energyRepo: energyRepo, statsSvc: statsSvc}
 }
 
 func (s *EnergyService) InsertAssets(data []model.Assets) error {
@@ -40,6 +42,15 @@ func (s *EnergyService) InsertAssets(data []model.Assets) error {
 
 	if err := s.insertSummaryData(data); err != nil {
 		return err
+	}
+
+	// 刷新当天日终快照，使汇总统计实时跟随最新推送。
+	// 快照同步失败不影响本次数据写入，仅记录告警日志。
+	if s.statsSvc != nil {
+		today := time.Now().Format("2006-01-02")
+		if _, err := s.statsSvc.SyncDailySnapshots(&SyncDailyRequest{StartDate: today, EndDate: today}); err != nil {
+			zap.L().Warn("刷新日终快照失败", zap.Error(err))
+		}
 	}
 
 	// 彩色打印持仓汇总到控制台

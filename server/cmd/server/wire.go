@@ -28,6 +28,7 @@ func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, up
 	roleRepo := repository.NewRoleRepository(db)
 	energyRepo := repository.NewEnergyRepository(db)
 	jyDataRepo := repository.NewJyDataRepository(db)
+	tradeStatsRepo := repository.NewTradeStatsRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
 	subRepo := repository.NewSubscriptionRepository(db)
 	tcRepo := repository.NewThemeContentRepository(db)
@@ -37,7 +38,8 @@ func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, up
 	userSvc := service.NewUserService(userRepo, roleRepo)
 	roleSvc := service.NewRoleService(roleRepo)
 	uploadSvc := service.NewUploadService(uploader)
-	energySvc := service.NewEnergyService(energyRepo)
+	tradeStatsSvc := service.NewTradeStatsService(tradeStatsRepo)
+	energySvc := service.NewEnergyService(energyRepo, tradeStatsSvc)
 	tradeSvc := service.NewTradeService(energyRepo)
 	jyDataSvc := service.NewJyDataService(jyDataRepo)
 	sseSvc := service.NewSseService(cfg.AI.BaseURL, cfg.AI.Token)
@@ -55,6 +57,7 @@ func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, up
 		Upload:       handlerv1.NewUploadHandler(uploadSvc),
 		Energy:       handlerv1.NewEnergyHandler(energySvc),
 		Trade:        handlerv1.NewTradeHandler(tradeSvc),
+		TradeStats:   handlerv1.NewTradeStatsHandler(tradeStatsSvc),
 		JyData:       handlerv1.NewJyDataHandler(jyDataSvc),
 		Sse:          handlerv1.NewSseHandler(sseSvc),
 		Ai:           handlerv1.NewAiHandler(aiSvc),

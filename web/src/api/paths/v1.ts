@@ -19,6 +19,11 @@ export const apiPathsV1 = {
   trade: {
     index: "/api/v1/trade/index",
     summary: "/api/v1/trade/summary",
+    stats: {
+      query: "/api/v1/trade/stats/query",
+      sync: "/api/v1/trade/stats/sync",
+      range: "/api/v1/trade/stats/range",
+    },
   },
   energy: {
     insert: "/api/v1/energy/insert",
