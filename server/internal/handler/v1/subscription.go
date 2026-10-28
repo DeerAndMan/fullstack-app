@@ -240,3 +240,30 @@ func (h *SubscriptionHandler) DetailTable(ctx context.Context, c *app.RequestCon
 	}
 	response.OK(ctx, c, result)
 }
+
+func (h *SubscriptionHandler) UpdatePreferences(ctx context.Context, c *app.RequestContext) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Fail(ctx, c, errcode.ErrBadRequest)
+		return
+	}
+	userID, err := strconv.ParseInt(c.Param("userId"), 10, 64)
+	if err != nil {
+		response.Fail(ctx, c, errcode.ErrBadRequest)
+		return
+	}
+	var req service.SubscriptionPreferencesRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		response.Fail(ctx, c, errcode.ErrBadRequest)
+		return
+	}
+	if err := h.subSvc.UpdatePreferences(id, userID, &req); err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			response.Fail(ctx, c, e)
+			return
+		}
+		response.Fail(ctx, c, errcode.ErrInternal)
+		return
+	}
+	response.OKWithMessage(ctx, c, "星标与排序已保存")
+}

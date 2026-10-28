@@ -37,7 +37,7 @@ func (r *SubscriptionRepository) GetByUserID(userID int64) ([]model.XqSubscripti
 
 func (r *SubscriptionRepository) GetAll() ([]model.XqSubscription, error) {
 	var subs []model.XqSubscription
-	err := r.db.Find(&subs).Error
+	err := r.db.Order("is_starred DESC").Order("sort_order DESC").Order("id ASC").Order("user_id ASC").Find(&subs).Error
 	return subs, err
 }
 
@@ -69,6 +69,26 @@ func (r *SubscriptionRepository) UpdateDescription(id, userID int64, desc string
 	return r.db.Model(&model.XqSubscription{}).
 		Where("id = ? AND user_id = ?", id, userID).
 		Update("description", desc).Error
+}
+
+func (r *SubscriptionRepository) UpdatePreferences(id, userID int64, updates map[string]interface{}) error {
+	result := r.db.Model(&model.XqSubscription{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	// MySQL 对重复保存相同值可能返回 0，需区分未修改与记录不存在。
+	if result.RowsAffected == 0 {
+		exists, err := r.Exists(id, userID)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return gorm.ErrRecordNotFound
+		}
+	}
+	return nil
 }
 
 func (r *SubscriptionRepository) GetAllEnabled() ([]model.XqSubscription, error) {

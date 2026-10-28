@@ -49,6 +49,7 @@ export const apiPathsV1 = {
       list: "/api/v1/subscriptions",
       add: "/api/v1/subscriptions",
       formerName: "/api/v1/subscriptions/description",
+      preferences: "/api/v1/subscriptions/preferences",
       delete: "/api/v1/subscriptions",
       detail: "/api/v1/subscriptions/detail",
       detailTable: "/api/v1/subscriptions/detail-table",

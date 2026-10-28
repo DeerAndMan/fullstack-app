@@ -1,0 +1,28 @@
+.subscribe-post-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+.subscribe-post-content img {
+  display: inline-block;
+  max-width: min(160px, 100%);
+  max-height: 120px;
+  height: auto;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.subscribe-post-content img[role="button"] {
+  cursor: zoom-in;
+  border-radius: 4px;
+}
+
+.subscribe-post-content img[height="24"] {
+  height: 24px;
+  width: auto;
+}
+
+.subscribe-post-content pre {
+  white-space: pre-wrap;
+}

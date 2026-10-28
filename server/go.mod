@@ -3,6 +3,7 @@ module fullstack-app/server
 go 1.25.0
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/casbin/casbin/v2 v2.103.0
 	github.com/cloudwego/hertz v0.9.4-0.20241021100040-3477b0309b81
