@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Recovery 恢复，防止程序崩溃
 func Recovery() app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
 		defer func() {

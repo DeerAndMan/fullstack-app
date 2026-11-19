@@ -11,6 +11,7 @@ import (
 	jwtpkg "fullstack-app/server/pkg/jwt"
 	"fullstack-app/server/pkg/upload"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -21,22 +22,25 @@ type AppDeps struct {
 	WsHub *service.WsHub
 }
 
-func initHandlers(db *gorm.DB, jwtManager *jwtpkg.Manager, uploader *upload.Uploader, cfg *config.Config) *AppDeps {
+func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, uploader *upload.Uploader, cfg *config.Config) *AppDeps {
 	// Repository
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	energyRepo := repository.NewEnergyRepository(db)
 	jyDataRepo := repository.NewJyDataRepository(db)
+	tradeStatsRepo := repository.NewTradeStatsRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
 	subRepo := repository.NewSubscriptionRepository(db)
 	tcRepo := repository.NewThemeContentRepository(db)
+	researchRepo := repository.NewTopicResearchRepository(db)
 
 	// Service
-	authSvc := service.NewAuthService(userRepo, jwtManager)
+	authSvc := service.NewAuthService(userRepo, jwtManager, rdb)
 	userSvc := service.NewUserService(userRepo, roleRepo)
 	roleSvc := service.NewRoleService(roleRepo)
 	uploadSvc := service.NewUploadService(uploader)
-	energySvc := service.NewEnergyService(energyRepo)
+	tradeStatsSvc := service.NewTradeStatsService(tradeStatsRepo)
+	energySvc := service.NewEnergyService(energyRepo, tradeStatsSvc)
 	tradeSvc := service.NewTradeService(energyRepo)
 	jyDataSvc := service.NewJyDataService(jyDataRepo)
 	sseSvc := service.NewSseService(cfg.AI.BaseURL, cfg.AI.Token)
@@ -44,6 +48,8 @@ func initHandlers(db *gorm.DB, jwtManager *jwtpkg.Manager, uploader *upload.Uplo
 	menuSvc := service.NewMenuService(menuRepo)
 	subSvc := service.NewSubscriptionService(subRepo, tcRepo)
 	tcSvc := service.NewThemeContentService(tcRepo, subSvc)
+	marketSvc := service.NewMarketService()
+	researchSvc := service.NewTopicResearchService(researchRepo, marketSvc, cfg.Server.Mode == "debug")
 	wsHub := service.NewWsHub()
 
 	// v1 Handlers
@@ -54,6 +60,7 @@ func initHandlers(db *gorm.DB, jwtManager *jwtpkg.Manager, uploader *upload.Uplo
 		Upload:       handlerv1.NewUploadHandler(uploadSvc),
 		Energy:       handlerv1.NewEnergyHandler(energySvc),
 		Trade:        handlerv1.NewTradeHandler(tradeSvc),
+		TradeStats:   handlerv1.NewTradeStatsHandler(tradeStatsSvc),
 		JyData:       handlerv1.NewJyDataHandler(jyDataSvc),
 		Sse:          handlerv1.NewSseHandler(sseSvc),
 		Ai:           handlerv1.NewAiHandler(aiSvc),
@@ -61,6 +68,8 @@ func initHandlers(db *gorm.DB, jwtManager *jwtpkg.Manager, uploader *upload.Uplo
 		Menu:         handlerv1.NewMenuHandler(menuSvc),
 		Subscription: handlerv1.NewSubscriptionHandler(subSvc),
 		ThemeContent: handlerv1.NewThemeContentHandler(tcSvc),
+		Market:       handlerv1.NewMarketHandler(marketSvc),
+		Research:     handlerv1.NewTopicResearchHandler(researchSvc),
 	}
 
 	// v2 Handlers

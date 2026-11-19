@@ -6,12 +6,7 @@ import dayjs from "dayjs";
 
 import { useQuerySubscribeDetail } from "@/api/subscribe";
 import type { ThemeContentItem } from "@/types/xq/subscribe/home";
-
-function stripHtml(html: string): string {
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  return div.textContent || div.innerText || "";
-}
+import PostContent from "./post-content";
 
 const KEYWORD_LABEL_MAP: Record<string, string> = {
   ip_location: "IP属地",
@@ -90,19 +85,10 @@ export default function SubscribeDetail() {
         width: 140,
       },
       {
-        title: "内容摘要",
+        title: "内容",
         dataIndex: "text",
         key: "text",
-        ellipsis: { showTitle: false },
-        render: (text: string) => {
-          const plain = text ? stripHtml(text) : "";
-          const summary = plain.length > 80 ? `${plain.slice(0, 80)}...` : plain;
-          return (
-            <Tooltip title={plain} placement="topLeft">
-              <span>{summary || "-"}</span>
-            </Tooltip>
-          );
-        },
+        render: (text: ThemeContentItem["text"]) => <PostContent text={text} />,
       },
       {
         title: "创建时间",
@@ -187,6 +173,7 @@ export default function SubscribeDetail() {
           loading={queryTable.isLoading}
           dataSource={table?.list || []}
           columns={columns}
+          tableLayout="fixed"
           rowKey={(record: ThemeContentItem) => `${record.id}-${record.user_id}`}
           scroll={{ x: 830 }}
           pagination={{

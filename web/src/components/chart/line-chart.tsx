@@ -1,8 +1,8 @@
 import { Line } from "@ant-design/charts";
-import Decimal from "decimal.js";
 
 import type { EnergyItem } from "@/types/schema";
 import type { LineConfig, Tooltip } from "@ant-design/charts";
+import { formatPercent } from "@/utils/number";
 
 interface LineDataItem {
   time: string;
@@ -91,7 +91,7 @@ export default function LineChart(props: LineProps) {
                       <b>
                         【{nowData?.Zxjg}*{nowData?.Zqsl}={nowData?.Zxsz}】
                       </b>
-                      <b>{new Decimal(nowData?.Drykbl || 0).times(100).toString()}%</b>
+                      <b>{formatPercent(nowData?.Drykbl)}</b>
                       <b>{nowData?.Gfssmmce || 0}</b>
                     </div>
                   </div>

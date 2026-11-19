@@ -5,6 +5,8 @@ export const SubscribeItemSchema = z.object({
   user_id: z.string(),
   description: z.string().optional().nullable(),
   enabled: z.boolean(),
+  is_starred: z.boolean().default(false),
+  sort_order: z.number().int().min(0).max(999999).default(0),
 });
 
 export const SubscribeListSchema = z.array(SubscribeItemSchema);

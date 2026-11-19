@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -54,10 +55,8 @@ func (c *RedisConfig) Addr() string {
 }
 
 type JWTConfig struct {
-	Secret        string `mapstructure:"secret"`
-	AccessExpire  int    `mapstructure:"access_expire"`  // hours
-	RefreshExpire int    `mapstructure:"refresh_expire"` // hours
-	Issuer        string `mapstructure:"issuer"`
+	AccessExpire  float64 `mapstructure:"access_expire"`  // 单位：小时，支持小数（如 0.1 表示 6 分钟）
+	RefreshExpire float64 `mapstructure:"refresh_expire"` // 单位：小时，支持小数
 }
 
 type UploadConfig struct {
@@ -74,6 +73,8 @@ func Load(path string) (*Config, error) {
 	v := viper.New()
 	v.SetConfigFile(path)
 	v.SetEnvPrefix("APP")
+	// 将嵌套 key 的点替换为下划线，使 APP_MYSQL_HOST 这类环境变量能覆盖 mysql.host
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {

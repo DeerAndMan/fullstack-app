@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import z from "zod";
 
-import { RequestPost, RequestPut, RequestSchema } from "../";
+import { RequestDelete, RequestPost, RequestPut, RequestSchema } from "../";
 import { apiPathsV1 } from "../paths/v1";
 import { useGlobalStore } from "@/stores/global";
 
@@ -21,9 +21,7 @@ export const useQuerySubscribeHome = () => {
         url: apiPathsV1.xq.subscribe.list,
         schema: SubscribeListSchema,
       });
-      const newData = res.data.map(d => ({ ...d, key: d.id }));
-
-      return { ...res, data: newData };
+      return res;
     },
     enabled: true,
   });
@@ -39,7 +37,7 @@ export const useQuerySubscribeHome = () => {
       messageApi?.error(error.message || "状态切换失败");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey, exact: true });
+      return queryClient.invalidateQueries({ queryKey: ["subscribe"] });
     },
   });
 
@@ -52,7 +50,7 @@ export const useQuerySubscribeHome = () => {
       messageApi?.error(error.message || "添加订阅失败");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey, exact: true });
+      return queryClient.invalidateQueries({ queryKey, exact: true });
     },
   });
 
@@ -67,9 +65,41 @@ export const useQuerySubscribeHome = () => {
       messageApi?.error(error.message || "添加曾用名失败");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey, exact: true });
+      return queryClient.invalidateQueries({ queryKey: ["subscribe"] });
     },
   });
 
-  return { queryList, toggleMutation, addMutation, updateMutation };
+  const deleteMutation = useMutation({
+    mutationFn: (params: { id: string; user_id: string }) =>
+      RequestDelete(`${apiPathsV1.xq.subscribe.delete}/${params.id}/${params.user_id}`, {
+        schema: z.object({}).nullable(),
+      }),
+    onSuccess: () => {
+      messageApi?.success("订阅删除成功");
+    },
+    onError: (error: Error) => {
+      messageApi?.error(error.message || "删除订阅失败");
+    },
+    onSettled: () => {
+      return queryClient.invalidateQueries({ queryKey: ["subscribe"] });
+    },
+  });
+
+  const preferencesMutation = useMutation({
+    mutationFn: (params: { id: string; user_id: string; is_starred?: boolean; sort_order?: number }) => {
+      const { id, user_id, ...preferences } = params;
+      return RequestPut(`${apiPathsV1.xq.subscribe.preferences}/${id}/${user_id}`, preferences, {
+        schema: z.object({}).nullable(),
+      });
+    },
+    onSuccess: () => {
+      messageApi?.success("星标与排序已保存");
+    },
+    onError: (error: Error) => {
+      messageApi?.error(error.message || "保存星标与排序失败");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["subscribe"] }),
+  });
+
+  return { queryList, toggleMutation, addMutation, updateMutation, deleteMutation, preferencesMutation };
 };

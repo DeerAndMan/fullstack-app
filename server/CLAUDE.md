@@ -88,13 +88,33 @@ server/
 ## 常用命令
 
 ```bash
-make dev          # 使用 Air 热重载运行
+make dev          # 使用 Air 热重载运行（自动选择平台对应的 air 配置）
 make build        # CGO_ENABLED=0 go build -o bin/server cmd/server/main.go
 make test         # go test ./... -v -cover
 make lint         # golangci-lint run ./...
 make tidy         # go mod tidy
 make swagger      # swag init -g cmd/server/main.go -o docs
 ```
+
+### Air 热重载平台差异
+
+Windows 下 cmd 必须识别 `.exe` 才能执行二进制，因此本目录提供两份 air 配置：
+
+- `.air.toml` — Mac / Linux / Debian 使用，产物为 `tmp/server`
+- `.air.windows.toml` — Windows 使用，产物为 `tmp/server.exe`
+
+`make dev` 中已通过 `OS` 变量自动挑选配置文件，正常情况下直接 `make dev` 即可。
+若不通过 Makefile 直接调用 air，请按平台显式指定配置：
+
+```bash
+# Windows
+air -c .air.windows.toml
+
+# Mac / Linux / Debian
+air -c .air.toml      # 或直接 air，默认即读 .air.toml
+```
+
+**注意**：必须在 `server/` 目录下启动 air，否则二进制运行时找不到相对路径 `config/config.yaml`。
 
 ## API 端点
 

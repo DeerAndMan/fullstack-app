@@ -32,6 +32,26 @@ pnpm --prefix web build     # 前端类型检查 + 生产构建
 pnpm --prefix web dev       # 前端 Vite 开发服务，端口 6565
 ```
 
+## 连接远程数据库
+
+后端默认连本地 docker MySQL。需要连远程库时用 `make dev-server-remote`，它从 `server/.env.remote.local` 读取连接信息（该文件被 gitignore，密码不进版本库）。
+
+```bash
+# 首次使用：复制模板并填入真实地址/密码
+cp server/.env.remote.local.example server/.env.remote.local
+
+make dev-server          # 连本地 docker MySQL（默认）
+make dev-server-remote   # 连远程库（凭证来自 .env.remote.local）
+```
+
+原理：env 文件里的 `APP_MYSQL_*` 变量通过 Viper 的 `APP_` 前缀覆盖 `config.yaml` 的 mysql 配置，无需改动 gitignored 的 `config.yaml`。
+
+常见连接报错排查：
+
+- `ERROR 1130 Host not allowed`：来源 IP 未授权。在 MySQL 侧（宝塔→数据库→权限）把账号访问范围改为「指定 IP」（填本机公网出口 IP，`curl -s https://ipinfo.io/ip` 可查）或「所有人」。
+- `ERROR 1045 Access denied (using password: YES)`：账号或密码不对。注意宝塔/面板建库时通常生成与库同名的专用账号（库名 `energytest` → 账号 `energytest`），**不是 root**；用错账号即报此错。
+- 密码含 `( ) ! * ? $ 空格` 等特殊字符时，`.env.remote.local` 里必须用单引号包裹，否则 make 的 `/bin/sh` 解析会报语法错误或截断密码。
+
 ## 技术栈
 
 ### 后端

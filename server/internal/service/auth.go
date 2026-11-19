@@ -3,12 +3,15 @@ package service
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	"fullstack-app/server/internal/model"
 	"fullstack-app/server/internal/repository"
 	"fullstack-app/server/pkg/errcode"
 	jwtpkg "fullstack-app/server/pkg/jwt"
 
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -16,10 +19,15 @@ import (
 type AuthService struct {
 	userRepo   *repository.UserRepository
 	jwtManager *jwtpkg.Manager
+	rdb        *redis.Client // 预留：当前会话读写已下沉到 jwtManager，业务层暂未直接使用
 }
 
-func NewAuthService(userRepo *repository.UserRepository, jwtManager *jwtpkg.Manager) *AuthService {
-	return &AuthService{userRepo: userRepo, jwtManager: jwtManager}
+func NewAuthService(userRepo *repository.UserRepository, jwtManager *jwtpkg.Manager, rdb *redis.Client) *AuthService {
+	return &AuthService{
+		userRepo:   userRepo,
+		jwtManager: jwtManager,
+		rdb:        rdb,
+	}
 }
 
 type RegisterRequest struct {
@@ -90,7 +98,8 @@ func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 		return nil, errcode.ErrInvalidCredentials
 	}
 
-	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, user.Name)
+	// 生成不透明令牌对（会话信息由 jwtManager 写入 Redis）
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, time.Now().Unix())
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
@@ -126,18 +135,24 @@ func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 	}, nil
 }
 
+// RefreshToken 校验 refresh 令牌并签发新的令牌对。
+// 注意：旧令牌对应的 Redis 会话不会主动清除，会随各自 TTL 自然过期
 func (s *AuthService) RefreshToken(req *RefreshTokenRequest) (*jwtpkg.TokenPair, error) {
 	claims, err := s.jwtManager.ParseRefreshToken(req.RefreshToken)
 	if err != nil {
 		return nil, errcode.ErrTokenInvalid
 	}
 
-	return s.jwtManager.GenerateTokenPair(claims.UserID, claims.Username)
+	// 刷新时保留原会话的登录时间，语义上仍是同一次登录
+	return s.jwtManager.GenerateTokenPair(claims.UserID, claims.LoginAt)
 }
 
-func (s *AuthService) Logout() error {
-	// 当前 JWT 为无状态令牌，服务端不维护会话
-	// 后续可接入 Redis 黑名单机制
+func (s *AuthService) Logout(accessToken string) error {
+	// 不透明令牌：登出即删除 Redis 中的 access 会话，实现主动吊销
+	if err := s.jwtManager.Revoke(accessToken); err != nil {
+		zap.L().Error("吊销令牌失败", zap.Error(err))
+		return errcode.ErrInternal
+	}
 	return nil
 }
 
