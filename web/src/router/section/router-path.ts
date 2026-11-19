@@ -2,6 +2,9 @@ const ROUTER_PATH = {
   login: "/login",
   home: "/",
   data: "/data",
+  research: "/research",
+  hotspots: "/hotspots",
+  hotspotStock: "/hotspots/stock/:symbol",
   ws: "/ws",
   subscribe: {
     home: "/subscribe",

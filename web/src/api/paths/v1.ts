@@ -16,6 +16,8 @@ export const apiPathsV1 = {
     detail: "/api/v1/roles",
   },
   upload: "/api/v1/upload",
+  market: "/api/v1/market",
+  topicResearch: "/api/v1/topic-research",
   trade: {
     index: "/api/v1/trade/index",
     summary: "/api/v1/trade/summary",

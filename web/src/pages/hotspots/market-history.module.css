@@ -1,0 +1,55 @@
+.filters,
+.readout {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+}
+.filters {
+  margin-bottom: 16px;
+}
+.filters span,
+.note {
+  color: var(--market-secondary);
+}
+.readout {
+  padding: 14px 0;
+  border-block: 1px solid var(--market-border);
+  font-size: 0.88rem;
+}
+.readout strong {
+  margin-left: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.archivePicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.scroll {
+  overflow-x: auto;
+  margin-top: 18px;
+}
+.scroll svg {
+  display: block;
+  width: 100%;
+  min-width: 600px;
+  max-height: 410px;
+}
+.scroll svg text {
+  font: 12px system-ui;
+  fill: currentColor;
+}
+.scroll svg .title {
+  font-weight: 650;
+  font-size: 14px;
+}
+.note {
+  font-size: 0.8rem;
+}
+.note + details {
+  margin-block: 12px;
+}
+.note + details summary {
+  cursor: pointer;
+}

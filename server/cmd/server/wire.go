@@ -32,6 +32,7 @@ func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, up
 	menuRepo := repository.NewMenuRepository(db)
 	subRepo := repository.NewSubscriptionRepository(db)
 	tcRepo := repository.NewThemeContentRepository(db)
+	researchRepo := repository.NewTopicResearchRepository(db)
 
 	// Service
 	authSvc := service.NewAuthService(userRepo, jwtManager, rdb)
@@ -47,6 +48,8 @@ func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, up
 	menuSvc := service.NewMenuService(menuRepo)
 	subSvc := service.NewSubscriptionService(subRepo, tcRepo)
 	tcSvc := service.NewThemeContentService(tcRepo, subSvc)
+	marketSvc := service.NewMarketService()
+	researchSvc := service.NewTopicResearchService(researchRepo, marketSvc, cfg.Server.Mode == "debug")
 	wsHub := service.NewWsHub()
 
 	// v1 Handlers
@@ -65,6 +68,8 @@ func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, up
 		Menu:         handlerv1.NewMenuHandler(menuSvc),
 		Subscription: handlerv1.NewSubscriptionHandler(subSvc),
 		ThemeContent: handlerv1.NewThemeContentHandler(tcSvc),
+		Market:       handlerv1.NewMarketHandler(marketSvc),
+		Research:     handlerv1.NewTopicResearchHandler(researchSvc),
 	}
 
 	// v2 Handlers

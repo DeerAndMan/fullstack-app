@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, matchPath, useLocation, useNavigate } from "react-router-dom";
 import { Avatar, Button, Dropdown, Menu, Space, theme } from "antd";
 import { UserOutlined } from "@ant-design/icons";
 
 import { navRouter } from "@/router";
+import ROUTER_PATH from "@/router/section/router-path";
 import ThemeSwitch from "@/theme/theme-switch";
 import { useAuthStore } from "@/stores/auth";
 import { useGlobalStore } from "@/stores/global";
@@ -24,6 +25,7 @@ export const Nav = () => {
   const { token } = theme.useToken();
   const navigate = useNavigate();
   const location = useLocation();
+  const menuPath = matchPath(ROUTER_PATH.hotspotStock, location.pathname) ? ROUTER_PATH.hotspots : location.pathname;
   const messageApi = useGlobalStore(s => s.messageApi);
   const { role, menuRoles, user } = useAuthStore();
   const storeLogout = useAuthStore(s => s.storeLogout);
@@ -47,17 +49,17 @@ export const Nav = () => {
   const transformNode = useCallback(
     (routeData: NavRouter[], showKeys?: Record<string, boolean>) => {
       const transform = (node: NavRouter): MenuItem => {
-        if (showKeys && !showKeys[node.path]) return null;
         const menuItem: MenuItem = {
           key: node.path === "" ? `menu-${node.name}` : node.path,
           label: node.path !== "" ? <Link to={node.path}>{node.name}</Link> : node.name,
         };
 
-        if (node.children && node.children.length > 0) {
-          return { ...menuItem, children: node.children.map(child => transform(child)) };
+        if (node.children?.length) {
+          const children = node.children.map(transform).filter(child => child !== null);
+          return children.length ? { ...menuItem, children } : null;
         }
 
-        return menuItem;
+        return !showKeys || node.forAllUsers || showKeys[node.path] ? menuItem : null;
       };
 
       return routeData.map(node => transform(node)).filter(m => m);
@@ -88,7 +90,7 @@ export const Nav = () => {
     >
       <Menu
         mode="horizontal"
-        selectedKeys={[location.pathname]}
+        selectedKeys={[menuPath]}
         items={menuItems}
         style={{
           flex: 1,

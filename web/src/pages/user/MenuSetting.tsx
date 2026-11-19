@@ -47,7 +47,7 @@ export const MenuSetting = () => {
         return menuItem;
       };
 
-      return routeData.map(node => transform(node));
+      return routeData.filter(node => !node.forAllUsers).map(node => transform(node));
     },
     [queryList.isPending, queryList.data]
   );
