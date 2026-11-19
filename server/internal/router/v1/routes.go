@@ -16,6 +16,7 @@ type Handlers struct {
 	Upload       *handlerv1.UploadHandler
 	Energy       *handlerv1.EnergyHandler
 	Trade        *handlerv1.TradeHandler
+	TradeStats   *handlerv1.TradeStatsHandler
 	JyData       *handlerv1.JyDataHandler
 	Sse          *handlerv1.SseHandler
 	Ai           *handlerv1.AiHandler
@@ -23,12 +24,15 @@ type Handlers struct {
 	Menu         *handlerv1.MenuHandler
 	Subscription *handlerv1.SubscriptionHandler
 	ThemeContent *handlerv1.ThemeContentHandler
+	Market       *handlerv1.MarketHandler
+	Research     *handlerv1.TopicResearchHandler
 }
 
 func (h *Handlers) Register(srv *server.Hertz, jwtManager *jwtpkg.Manager) {
 	apiV1 := srv.Group("/api/v1")
-	protectedV1 := apiV1.Group("")
-	protectedV1.Use(middleware.JWTAuth(jwtManager))
+	protectedV1 := apiV1.Group("")                  // 受保护组
+	protectedV1.Use(middleware.JWTAuth(jwtManager)) // 添加 JWT 验证中间件
+	apiV1.GET("/topic-research/stream", h.Research.Stream(jwtManager))
 	RegisterRoutes(apiV1, protectedV1, h)
 }
 
@@ -39,6 +43,10 @@ func RegisterRoutes(public *route.RouterGroup, protected *route.RouterGroup, h *
 	registerUploadRoutes(protected, h.Upload)
 	registerEnergyRoutes(public, h.Energy)
 	registerTradeRoutes(protected, h.Trade)
+	registerTradeStatsRoutes(protected, h.TradeStats)
+	protected.GET("/market/:feed", h.Market.Feed)
+	protected.GET("/market/concepts/:concept/stocks/:symbol/reason", h.Market.ConceptReason)
+	registerTopicResearchRoutes(protected, h.Research)
 	registerJyDataRoutes(public, h.JyData)
 	registerSseRoutes(public, h.Sse)
 	registerAiRoutes(public, h.Ai)

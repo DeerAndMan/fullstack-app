@@ -15,8 +15,8 @@ import (
 )
 
 type ThemeContentService struct {
-	tcRepo  *repository.ThemeContentRepository
-	subSvc  *SubscriptionService
+	tcRepo *repository.ThemeContentRepository
+	subSvc *SubscriptionService
 }
 
 func NewThemeContentService(tcRepo *repository.ThemeContentRepository, subSvc *SubscriptionService) *ThemeContentService {
@@ -61,10 +61,10 @@ type SaveTimelineRequest struct {
 }
 
 type ThemeContentListResponse struct {
-	Data    []model.XqThemeContent `json:"data"`
-	Total   int64                  `json:"total"`
-	Limit   int                    `json:"limit"`
-	Offset  int                    `json:"offset"`
+	Data   []model.XqThemeContent `json:"data"`
+	Total  int64                  `json:"total"`
+	Limit  int                    `json:"limit"`
+	Offset int                    `json:"offset"`
 }
 
 type ThemeContentSearchResponse struct {

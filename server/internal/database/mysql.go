@@ -55,5 +55,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.Energy{},
 		&model.Summary{},
 		&model.JyData{},
+		&model.TradeDailySummary{},
+		&model.TopicResearchSkill{},
+		&model.TopicResearchRun{},
 	)
 }

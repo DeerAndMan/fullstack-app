@@ -1,0 +1,21 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "tmp/server.exe"
+  # 通过 -config 显式传入相对 server/ 根的配置路径，避免子进程工作目录变化导致找不到文件
+  args_bin = ["-config", "config/config.yaml"]
+  # 必须使用包路径而非单文件，否则同包下其他文件（如 wire.go）不会被编译
+  cmd = "go build -o tmp/server.exe ./cmd/server/"
+  delay = 1000
+  exclude_dir = ["tmp", "vendor", "docs", "uploads"]
+  exclude_regex = ["_test\\.go$"]
+  include_ext = ["go", "yaml"]
+  kill_delay = "1s"
+  send_interrupt = true
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = true

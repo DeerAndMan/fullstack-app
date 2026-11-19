@@ -93,6 +93,64 @@ export const WrappedTradeSummaryResponseSchema = BaseResponseSchema.extend({
   data: TradeItemSchema,
 });
 
+// 交易统计相关 Schema
+export const StatsQueryParamsSchema = z.object({
+  groupBy: z.enum(["day", "week", "month", "half_year", "year", "custom"]),
+  startDate: z.string().min(1, "开始日期不能为空"),
+  endDate: z.string().min(1, "结束日期不能为空"),
+});
+
+export const SyncDailyParamsSchema = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
+// 单期汇总统计 Schema
+export const PeriodStatsSchema = z.object({
+  periodLabel: z.string(), // 周期标签，如 2025-01-03 / 2025-W01 / 2025-01 / 2025-H1 / 2025
+  startDate: z.string(),
+  endDate: z.string(),
+  tradingDays: z.number(), // 交易天数
+  totalProfit: z.number(), // 总盈亏
+  profitRate: z.number(), // 收益率（小数形式，0.05 表示 5%）
+  avgDailyProfit: z.number(), // 平均每日盈亏
+  maxDailyProfit: z.number(), // 最大单日盈亏
+  minDailyProfit: z.number(), // 最小单日盈亏
+  positiveDays: z.number(), // 盈利天数
+  negativeDays: z.number(), // 亏损天数
+  flatDays: z.number(), // 平盘天数
+  winRate: z.number(), // 胜率（小数形式，0.6 表示 60%）
+  startAssets: z.number(), // 期初总资产
+  endAssets: z.number(), // 期末总资产
+  maxAssets: z.number(), // 期间最高总资产
+  minAssets: z.number(), // 期间最低总资产
+  assetsChange: z.number(), // 资产变化
+  maxDrawdown: z.number(), // 最大回撤（小数形式，0.1 表示 10%）
+  maxDrawdownDate: z.string(), // 最大回撤日期
+  volatility: z.number(), // 年化波动率（小数形式，0.25 表示 25%）
+});
+
+// 统计查询响应 Schema
+export const StatsQueryResponseSchema = z.object({
+  groupBy: z.string(),
+  list: z.array(PeriodStatsSchema),
+  overall: PeriodStatsSchema.nullable(),
+});
+
+// 同步日终快照响应 Schema
+export const SyncDailyResponseSchema = z.object({
+  synced: z.number(),
+  startDate: z.string(),
+  endDate: z.string(),
+});
+
+// 日终快照可用日期范围 Schema（无数据时 minDate / maxDate 为空串）
+export const StatsDateRangeSchema = z.object({
+  minDate: z.string(), // 最早交易日
+  maxDate: z.string(), // 最晚交易日
+  days: z.number(), // 交易日总数
+});
+
 // 导出类型
 export type TradeParams = z.infer<typeof TradeParamsSchema>;
 export type EnergyItem = z.infer<typeof EnergyItemSchema>;
@@ -100,3 +158,9 @@ export type TradeItem = z.infer<typeof TradeItemSchema>;
 export type TradeListResponse = z.infer<typeof TradeListResponseSchema>;
 export type TradeSummaryResponse = z.infer<typeof TradeSummaryResponseSchema>;
 export type BaseResponse = z.infer<typeof BaseResponseSchema>;
+export type StatsQueryParams = z.infer<typeof StatsQueryParamsSchema>;
+export type SyncDailyParams = z.infer<typeof SyncDailyParamsSchema>;
+export type PeriodStats = z.infer<typeof PeriodStatsSchema>;
+export type StatsQueryResponse = z.infer<typeof StatsQueryResponseSchema>;
+export type SyncDailyResponse = z.infer<typeof SyncDailyResponseSchema>;
+export type StatsDateRange = z.infer<typeof StatsDateRangeSchema>;

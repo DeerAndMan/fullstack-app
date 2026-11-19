@@ -16,9 +16,16 @@ export const apiPathsV1 = {
     detail: "/api/v1/roles",
   },
   upload: "/api/v1/upload",
+  market: "/api/v1/market",
+  topicResearch: "/api/v1/topic-research",
   trade: {
     index: "/api/v1/trade/index",
     summary: "/api/v1/trade/summary",
+    stats: {
+      query: "/api/v1/trade/stats/query",
+      sync: "/api/v1/trade/stats/sync",
+      range: "/api/v1/trade/stats/range",
+    },
   },
   energy: {
     insert: "/api/v1/energy/insert",
@@ -44,6 +51,7 @@ export const apiPathsV1 = {
       list: "/api/v1/subscriptions",
       add: "/api/v1/subscriptions",
       formerName: "/api/v1/subscriptions/description",
+      preferences: "/api/v1/subscriptions/preferences",
       delete: "/api/v1/subscriptions",
       detail: "/api/v1/subscriptions/detail",
       detailTable: "/api/v1/subscriptions/detail-table",

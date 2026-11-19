@@ -27,6 +27,8 @@ type SubscriptionResponse struct {
 	UserID      string `json:"user_id"`
 	Description string `json:"description"`
 	Enabled     *bool  `json:"enabled"`
+	IsStarred   bool   `json:"is_starred"`
+	SortOrder   int32  `json:"sort_order"`
 }
 
 type ToggleEnabledRequest struct {
@@ -37,12 +39,42 @@ type AppendDescriptionRequest struct {
 	FormerName string `json:"former_name" vd:"len($)>0"`
 }
 
+type SubscriptionPreferencesRequest struct {
+	IsStarred *bool  `json:"is_starred"`
+	SortOrder *int32 `json:"sort_order"`
+}
+
+func (s *SubscriptionService) UpdatePreferences(id, userID int64, req *SubscriptionPreferencesRequest) error {
+	if id <= 0 || userID <= 0 || req == nil || (req.IsStarred == nil && req.SortOrder == nil) {
+		return errcode.ErrBadRequest
+	}
+	updates := make(map[string]interface{})
+	if req.IsStarred != nil {
+		updates["is_starred"] = *req.IsStarred
+	}
+	if req.SortOrder != nil {
+		if *req.SortOrder < 0 || *req.SortOrder > 999999 {
+			return errcode.ErrBadRequest
+		}
+		updates["sort_order"] = *req.SortOrder
+	}
+	if err := s.subRepo.UpdatePreferences(id, userID, updates); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errcode.ErrSubscriptionNotFound
+		}
+		return errcode.ErrInternal
+	}
+	return nil
+}
+
 func toSubscriptionResponse(s *model.XqSubscription) SubscriptionResponse {
 	return SubscriptionResponse{
 		ID:          strconv.FormatInt(s.ID, 10),
 		UserID:      strconv.FormatInt(s.UserID, 10),
 		Description: s.Description,
 		Enabled:     s.Enabled,
+		IsStarred:   s.IsStarred,
+		SortOrder:   s.SortOrder,
 	}
 }
 
@@ -59,6 +91,9 @@ func (s *SubscriptionService) Create(sub *model.XqSubscription) (*model.XqSubscr
 		return nil, errcode.ErrSubscriptionDuplicate
 	}
 	sub.ID = snowflake.NextID()
+	// 新订阅从普通、默认排序开始，通过偏好接口设置星标与排序。
+	sub.IsStarred = false
+	sub.SortOrder = 0
 	if err := s.subRepo.Create(sub); err != nil {
 		return nil, errcode.ErrInternal
 	}

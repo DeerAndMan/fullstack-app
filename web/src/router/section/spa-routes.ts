@@ -5,6 +5,8 @@
  * 注意：此文件需与 router-list.tsx 中的路由保持同步。
  */
 
+import ROUTER_PATH from "./router-path";
+
 export interface SPARouteItem {
   /** 路由路径 */
   path: string;
@@ -18,6 +20,10 @@ export const spaRoutes: SPARouteItem[] = [
   { path: "/user", title: "用户详情" },
   { path: "/user/operation", title: "操作日志" },
   { path: "/data", title: "数据" },
+  { path: "/research/skills", title: "Skill 管理" },
+  { path: ROUTER_PATH.research, title: "题材查询" },
+  { path: ROUTER_PATH.hotspots, title: "热点" },
+  { path: ROUTER_PATH.hotspotStock, title: "个股行情" },
   { path: "/ws", title: "WebSocket" },
   { path: "/subscribe", title: "订阅首页" },
   { path: "/subscribe/list", title: "订阅列表" },

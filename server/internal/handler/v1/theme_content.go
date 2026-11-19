@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"fullstack-app/server/internal/service"
@@ -25,6 +26,13 @@ func (h *ThemeContentHandler) BatchCreate(ctx context.Context, c *app.RequestCon
 		response.FailWithMessage(ctx, c, errcode.ErrBadRequest, err.Error())
 		return
 	}
+
+	// 调试用：打印 BatchCreate 收到的数据条数
+	fmt.Printf("BatchCreate --->>> 收到数据: %d 条\n", len(req.HomeTimeline))
+	// 调试用：打印 BatchCreate 收到的原始数据
+	// if raw, err := json.MarshalIndent(req, "", "  "); err == nil {
+	// 	fmt.Printf("BatchCreate 收到数据:\n%s\n", raw)
+	// }
 
 	count, err := h.tcSvc.BatchCreate(&req)
 	if err != nil {

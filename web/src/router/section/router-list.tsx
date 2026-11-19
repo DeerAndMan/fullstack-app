@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 
 import Layout from "@/layouts";
 import { ssrRoutes } from "./ssr-routes";
+import ROUTER_PATH from "./router-path";
 
 import type { RouteObject } from "react-router-dom";
 
@@ -11,6 +12,10 @@ export const User = lazy(() => import("@pages/user"));
 export const Operation = lazy(() => import("@pages/user/operation"));
 export const HomePage = lazy(() => import("@pages/home"));
 export const TradePage = lazy(() => import("@pages/trade"));
+const HotspotsPage = lazy(() => import("@pages/hotspots"));
+const HotspotStockPage = lazy(() => import("@pages/hotspots/stock-detail"));
+const ResearchSkillsPage = lazy(() => import("@pages/research/skills"));
+const ResearchPage = lazy(() => import("@pages/research"));
 export const WsPage = lazy(() => import("@/pages/ws/ws-page"));
 export const SubscribePage = lazy(() => import("@/pages/subscribe/home"));
 export const SubscribeListPage = lazy(() => import("@/pages/subscribe/list"));
@@ -41,6 +46,10 @@ const routerList: RouteObject[] = [
         ],
       },
       { path: "/data", element: <TradePage /> },
+      { path: "/research/skills", element: <ResearchSkillsPage /> },
+      { path: ROUTER_PATH.research, element: <ResearchPage /> },
+      { path: ROUTER_PATH.hotspots, element: <HotspotsPage /> },
+      { path: ROUTER_PATH.hotspotStock, element: <HotspotStockPage /> },
       { path: "/ws", element: <WsPage /> },
       // SSR 页面（从 ssr-routes.ts 自动生成，支持任意路径）
       ...ssrRoutes.map(({ path, component }) => ({

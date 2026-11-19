@@ -17,6 +17,7 @@ func registerSubscriptionRoutes(public *route.RouterGroup, h *handlerv1.Subscrip
 		subs.PUT("/toggle/:userId", h.ToggleEnabled)
 		subs.GET("/exists/:id/:userId", h.Exists)
 		subs.PUT("/description/:id/:userId", h.AppendDescription)
+		subs.PUT("/preferences/:id/:userId", h.UpdatePreferences)
 		subs.GET("/detail/:id/:userId", h.Detail)
 		subs.GET("/detail-table/:userId", h.DetailTable)
 	}

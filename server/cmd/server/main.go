@@ -67,25 +67,24 @@ func main() {
 		zap.L().Fatal("auto migrate failed", zap.Error(err))
 	}
 
-	// Redis (应用层暂未使用，连接失败不阻塞启动)
-	_, err = database.NewRedis(&cfg.Redis)
+	// Redis
+	rdb, err := database.NewRedis(&cfg.Redis)
 	if err != nil {
-		zap.L().Warn("connect redis failed, skipping", zap.Error(err))
+		zap.L().Fatal("connect redis failed", zap.Error(err))
 	}
 
-	// JWT
+	// JWT（不透明令牌，会话存储于 Redis）
 	jwtManager := jwtpkg.NewManager(
-		cfg.JWT.Secret,
+		rdb,
 		cfg.JWT.AccessExpire,
 		cfg.JWT.RefreshExpire,
-		cfg.JWT.Issuer,
 	)
 
 	// Uploader
 	uploader := upload.NewUploader(cfg.Upload.Path, cfg.Upload.MaxSize, cfg.Upload.AllowExts)
 
 	// 组装依赖
-	deps := initHandlers(db, jwtManager, uploader, cfg)
+	deps := initHandlers(db, rdb, jwtManager, uploader, cfg)
 
 	// Hertz server
 	h := server.Default(
