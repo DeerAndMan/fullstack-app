@@ -25,6 +25,7 @@ type Handlers struct {
 	Subscription *handlerv1.SubscriptionHandler
 	ThemeContent *handlerv1.ThemeContentHandler
 	Market       *handlerv1.MarketHandler
+	Review       *handlerv1.MarketReviewHandler
 	Research     *handlerv1.TopicResearchHandler
 }
 
@@ -44,6 +45,12 @@ func RegisterRoutes(public *route.RouterGroup, protected *route.RouterGroup, h *
 	registerEnergyRoutes(public, h.Energy)
 	registerTradeRoutes(protected, h.Trade)
 	registerTradeStatsRoutes(protected, h.TradeStats)
+	protected.GET("/review/dates", h.Review.Dates)
+	protected.GET("/review/daily", h.Review.Daily)
+	protected.GET("/review/members", h.Review.Members)
+	protected.GET("/review/study", h.Review.Study)
+	protected.GET("/review/note", h.Review.Note)
+	protected.PUT("/review/note", h.Review.SaveNote)
 	protected.GET("/market/:feed", h.Market.Feed)
 	protected.GET("/market/concepts/:concept/stocks/:symbol/reason", h.Market.ConceptReason)
 	registerTopicResearchRoutes(protected, h.Research)

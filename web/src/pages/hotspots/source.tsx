@@ -1,8 +1,47 @@
+import { useSyncExternalStore } from "react";
 import { Select } from "antd";
 import { useSearchParams } from "react-router-dom";
 import type { MarketFeed } from "./data";
 
 type SourceOption = { value: MarketFeed; label: string };
+type SourceOptions<T extends MarketFeed> = readonly [{ value: T }, ...{ value: T }[]];
+
+const sessionSources = new Map<string, MarketFeed>();
+const sourceListeners = new Set<() => void>();
+
+function subscribeSources(listener: () => void) {
+  sourceListeners.add(listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    sourceListeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+export function useRememberedMarketSource<T extends MarketFeed>(key: string, options: SourceOptions<T>) {
+  const storageKey = `market.source.${key}`;
+  const remembered = useSyncExternalStore(subscribeSources, () => {
+    const sessionValue = sessionSources.get(storageKey);
+    if (sessionValue) return sessionValue;
+    try {
+      return window.localStorage.getItem(storageKey);
+    } catch {
+      return null;
+    }
+  }, () => null);
+  const fallback = options[0].value;
+  const feed = options.find(option => option.value === remembered)?.value ?? fallback;
+  const remember = (value: T) => {
+    try {
+      window.localStorage.setItem(storageKey, value);
+      sessionSources.delete(storageKey);
+    } catch {
+      sessionSources.set(storageKey, value);
+    }
+    sourceListeners.forEach(listener => listener());
+  };
+  return [feed, remember] as const;
+}
 
 export const conceptSources = [
   { value: "concept", label: "新浪财经" },
@@ -29,17 +68,21 @@ export const limitSources = [
 ] as const;
 
 export function useMarketSource<T extends MarketFeed>(
-  key: string, options: readonly [{ value: T; label: string }, ...{ value: T; label: string }[]],
+  key: string, options: SourceOptions<T>,
 ) {
   const [params, setParams] = useSearchParams();
+  const [remembered, remember] = useRememberedMarketSource(key, options);
   const fallback = options[0].value;
-  const feed = options.find(option => option.value === params.get(key))?.value ?? fallback;
-  const setFeed = (value: T) => setParams(previous => {
-    const next = new URLSearchParams(previous);
-    if (value === fallback) next.delete(key);
-    else next.set(key, value);
-    return next;
-  }, { replace: true });
+  const feed = options.find(option => option.value === params.get(key))?.value ?? remembered;
+  const setFeed = (value: T) => {
+    remember(value);
+    setParams(previous => {
+      const next = new URLSearchParams(previous);
+      if (value === fallback) next.delete(key);
+      else next.set(key, value);
+      return next;
+    }, { replace: true });
+  };
   return [feed, setFeed] as const;
 }
 

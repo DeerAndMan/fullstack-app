@@ -28,6 +28,7 @@ var (
 )
 
 type TopicResearchService struct {
+	Reviews  *repository.MarketReviewRepository
 	repo     *repository.TopicResearchRepository
 	market   *MarketService
 	client   *http.Client
@@ -200,9 +201,7 @@ func (s *TopicResearchService) Start(ctx context.Context, userID uint, req Resea
 		return model.TopicResearchRun{}, errcode.New(400, "请输入 1–120 字的题材问题，最多附带 8 个可选 Skill。", http.StatusBadRequest)
 	}
 	key := researchAPIKey(s.localKey)
-	if key == "" {
-		return model.TopicResearchRun{}, errResearchKey
-	}
+
 	skills, err := s.Skills(ctx, userID)
 	if err != nil {
 		return model.TopicResearchRun{}, err
@@ -219,6 +218,9 @@ func (s *TopicResearchService) Start(ctx context.Context, userID uint, req Resea
 		} else {
 			return model.TopicResearchRun{}, errcode.ErrBadRequest
 		}
+	}
+	if key == "" && !(s.Reviews != nil && useMarketReview(question, selected)) {
+		return model.TopicResearchRun{}, errResearchKey
 	}
 	var reference *ResearchRunView
 	if req.ReferenceID != 0 {
@@ -281,7 +283,12 @@ func (s *TopicResearchService) Start(ctx context.Context, userID uint, req Resea
 		s.progress(job, "正在检索题材和公开资料")
 		report := s.investigate(job, key, question, selected, reference)
 		s.progress(job, "正在撰写回答")
-		report.Reply = s.streamReply(job, row.ID, key, question, selected, reference, report)
+		if key != "" {
+			report.Reply = s.streamReply(job, row.ID, key, question, selected, reference, report)
+		}
+		if report.Reply == "" && s.Reviews != nil && useMarketReview(question, selected) {
+			report.Reply = report.Conclusion
+		}
 		data, err := json.Marshal(report)
 		save, done := context.WithTimeout(context.Background(), 5*time.Second)
 		defer done()
@@ -311,6 +318,9 @@ func (s *TopicResearchService) investigate(ctx context.Context, key, question st
 	focus := question
 	if reference != nil {
 		focus = strings.Join(reference.Result.Topics, "、") + " " + question
+	}
+	if s.Reviews != nil && useMarketReview(question, selected) {
+		return s.reviewEvidence(ctx, question, reference)
 	}
 	plans := researchSkillPlans(focus, selected)
 	if len(plans) == 0 {

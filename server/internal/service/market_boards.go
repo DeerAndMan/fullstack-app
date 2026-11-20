@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -45,6 +47,62 @@ func (s *MarketService) eastmoneyBoardPage(ctx context.Context, query url.Values
 
 func (s *MarketService) regionFundFlow(ctx context.Context, _ string) (MarketDataset, error) {
 	return s.eastmoneyBoardRows(ctx, "m:90 t:1", eastmoneyRegionPage, eastmoneyBoardHosts, false)
+}
+
+const sinaRegionPage = "https://vip.stock.finance.sina.com.cn/mkt/#diyu"
+
+func (s *MarketService) sinaRegionFundFlow(ctx context.Context, _ string) (MarketDataset, error) {
+	catalog, err := s.sinaSectorFeed("newFLJK.php", url.Values{"param": {"area"}})(ctx, "")
+	if err != nil {
+		return MarketDataset{}, err
+	}
+	const workers = 10
+	semaphore := make(chan struct{}, workers)
+	var pending sync.WaitGroup
+	for i := range catalog.Rows {
+		pending.Add(1)
+		go func(row *MarketRow) {
+			defer pending.Done()
+			if !sinaRegionCode.MatchString(row.Code) {
+				return
+			}
+			select {
+			case semaphore <- struct{}{}:
+			case <-ctx.Done():
+				return
+			}
+			defer func() { <-semaphore }()
+			data, err := s.loadSinaBoardMembers(ctx, row.Code, true)
+			if err != nil || data.Total == nil || *data.Total == 0 || len(data.Rows) != *data.Total {
+				return
+			}
+			var net float64
+			for _, stock := range data.Rows {
+				if stock.Net == nil {
+					return
+				}
+				net += *stock.Net
+			}
+			row.Net = &net
+			row.Count = data.Total
+		}(&catalog.Rows[i])
+	}
+	pending.Wait()
+
+	out := MarketDataset{Source: "新浪财经", SourceURL: sinaRegionPage}
+	for _, row := range catalog.Rows {
+		if row.Net != nil {
+			out.Rows = append(out.Rows, row)
+		}
+	}
+	if len(out.Rows) == 0 {
+		return MarketDataset{}, errMarketData
+	}
+	if len(out.Rows) < len(catalog.Rows) {
+		out.Message = "部分地区的成分股资金数据不全，暂未列出这些地区。"
+	}
+	sort.SliceStable(out.Rows, func(i, j int) bool { return *out.Rows[i].Net > *out.Rows[j].Net })
+	return out, nil
 }
 
 func (s *MarketService) eastmoneyFundFlow(ctx context.Context) (MarketDataset, error) {

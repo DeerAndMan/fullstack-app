@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Alert, Card, Collapse, Empty, Space, Table, Tag } from "antd";
 import { updateTime } from "../hotspots/data";
 import styles from "./research.module.css";
@@ -14,6 +15,9 @@ const chainLabels = {
 };
 
 function SourceLink({ source, compact = false }: { source: ResearchSource; compact?: boolean }) {
+  if (/^\/hotspots\/review(?:\?[^#\\\s]*)?$/.test(source.url)) {
+    return <Link to={source.url}>{source.title}</Link>;
+  }
   let valid = false;
   try {
     const url = new URL(source.url);
@@ -69,6 +73,14 @@ export default function ResearchResult({ run }: { run: ResearchRun }) {
       : <Alert showIcon type="warning" message={run.error || "没有可显示的结果。"} />;
   }
 
+  if (report.topics.length === 1 && report.topics[0] === "强势股复盘" &&
+      (report.sources.length === 0 || report.sources[0].provider === "复盘归档")) {
+    return <Card title="复盘归档">
+      <p>{report.conclusion}</p>
+      {report.notes.filter(note => !report.conclusion?.includes(note)).map(note => <p key={note}>{note}</p>)}
+      {report.sources.map(source => <SourceLink key={source.id} source={source} />)}
+    </Card>;
+  }
   const sources = new Map(report.sources.map(source => [source.id, source]));
   const observations = new Map(report.observations?.map(row => [row.code, row]));
   const relatedSources = (ids: string[]) => ids.flatMap(id => sources.has(id) ? [sources.get(id)!] : []);

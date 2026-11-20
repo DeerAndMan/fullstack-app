@@ -4,6 +4,7 @@ const ROUTER_PATH = {
   data: "/data",
   research: "/research",
   hotspots: "/hotspots",
+  marketReview: "/hotspots/review",
   hotspotStock: "/hotspots/stock/:symbol",
   ws: "/ws",
   subscribe: {

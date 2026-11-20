@@ -6,7 +6,7 @@ import { StockLink } from "./stock-link";
 import styles from "./hotspots.module.css";
 
 export const boardFeeds = ["industry", "concept-eastmoney", "industry-eastmoney",
-  "fund-flow", "fund-flow-eastmoney", "fund-flow-sina", "region-fund-flow"] as const;
+  "fund-flow", "fund-flow-eastmoney", "fund-flow-sina", "region-fund-flow", "region-fund-flow-sina"] as const;
 export type BoardFeed = typeof boardFeeds[number];
 
 export function BoardDetail({ code, feed, onClose }: { code: string; feed: BoardFeed; onClose: () => void }) {

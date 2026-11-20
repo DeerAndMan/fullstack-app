@@ -15,35 +15,37 @@ import (
 )
 
 type MarketRow struct {
-	PETTM       *float64 `json:"peTtm,omitempty"`
-	PBMRQ       *float64 `json:"pbMrq,omitempty"`
-	PSTTM       *float64 `json:"psTtm,omitempty"`
-	PCFOCFTTM   *float64 `json:"pcfOcfTtm,omitempty"`
-	QuoteSource string   `json:"quoteSource,omitempty"`
-	ScoreURL    string   `json:"scoreUrl,omitempty"`
-	Advancers   *int     `json:"advancers,omitempty"`
-	Decliners   *int     `json:"decliners,omitempty"`
-	Sentiment   *float64 `json:"sentiment,omitempty"`
-	Code        string   `json:"code"`
-	Symbol      string   `json:"symbol,omitempty"`
-	Name        string   `json:"name"`
-	Date        string   `json:"date,omitempty"`
-	Detail      string   `json:"detail,omitempty"`
-	URL         string   `json:"url,omitempty"`
-	Price       *float64 `json:"price,omitempty"`
-	Change      *float64 `json:"change,omitempty"`
-	Amount      *float64 `json:"amount,omitempty"`
-	Net         *float64 `json:"net,omitempty"`
-	Count       *int     `json:"count,omitempty"`
-	Priority    *int     `json:"priority,omitempty"`
-	Open        *float64 `json:"open,omitempty"`
-	High        *float64 `json:"high,omitempty"`
-	Low         *float64 `json:"low,omitempty"`
-	Volume      *float64 `json:"volume,omitempty"`
-	Average     *float64 `json:"average,omitempty"`
-	Previous    string   `json:"previous,omitempty"`
-	Forecast    string   `json:"forecast,omitempty"`
-	Actual      string   `json:"actual,omitempty"`
+	ShanghaiChange *float64 `json:"shanghaiChange,omitempty"`
+	ShenzhenChange *float64 `json:"shenzhenChange,omitempty"`
+	PETTM          *float64 `json:"peTtm,omitempty"`
+	PBMRQ          *float64 `json:"pbMrq,omitempty"`
+	PSTTM          *float64 `json:"psTtm,omitempty"`
+	PCFOCFTTM      *float64 `json:"pcfOcfTtm,omitempty"`
+	QuoteSource    string   `json:"quoteSource,omitempty"`
+	ScoreURL       string   `json:"scoreUrl,omitempty"`
+	Advancers      *int     `json:"advancers,omitempty"`
+	Decliners      *int     `json:"decliners,omitempty"`
+	Sentiment      *float64 `json:"sentiment,omitempty"`
+	Code           string   `json:"code"`
+	Symbol         string   `json:"symbol,omitempty"`
+	Name           string   `json:"name"`
+	Date           string   `json:"date,omitempty"`
+	Detail         string   `json:"detail,omitempty"`
+	URL            string   `json:"url,omitempty"`
+	Price          *float64 `json:"price,omitempty"`
+	Change         *float64 `json:"change,omitempty"`
+	Amount         *float64 `json:"amount,omitempty"`
+	Net            *float64 `json:"net,omitempty"`
+	Count          *int     `json:"count,omitempty"`
+	Priority       *int     `json:"priority,omitempty"`
+	Open           *float64 `json:"open,omitempty"`
+	High           *float64 `json:"high,omitempty"`
+	Low            *float64 `json:"low,omitempty"`
+	Volume         *float64 `json:"volume,omitempty"`
+	Average        *float64 `json:"average,omitempty"`
+	Previous       string   `json:"previous,omitempty"`
+	Forecast       string   `json:"forecast,omitempty"`
+	Actual         string   `json:"actual,omitempty"`
 }
 
 type MarketDataset struct {
@@ -78,6 +80,7 @@ var conceptCode = regexp.MustCompile(`^gn_[a-z0-9_]{1,40}$`)
 var marketStockCode = regexp.MustCompile(`^(?:sh6[0-9]{5}|sz(?:00|30)[0-9]{4}|bj[489][0-9]{5})$`)
 var eastmoneyBoardCode = regexp.MustCompile(`^BK[0-9]{4,6}$`)
 var sinaIndustryCode = regexp.MustCompile(`^(?:new_[a-z0-9]+|hangye_[A-Za-z0-9]+)$`)
+var sinaRegionCode = regexp.MustCompile(`^diyu_[0-9]{6}$`)
 
 const (
 	indexSymbols  = "sh000001,sz399001,sz399006,sh000300,sh000016,sh000905,sh000852,sh000688"
@@ -106,20 +109,29 @@ func (s *MarketService) Feed(ctx context.Context, feed, symbol, date string) (Ma
 		"concept-ths":          s.thsConceptQuotes,
 		"fund-flow-eastmoney":  s.sourceFundFlow,
 		"fund-flow-sina":       func(ctx context.Context, _ string) (MarketDataset, error) { return s.sinaFundFlow(ctx) },
-		"limit-up-ths":         s.thsLimitPool("limit_up/limit_up_pool"),
-		"opened-limit-ths":     s.thsLimitPool("limit_up/open_limit_pool"),
+		"limit-up-ths":         s.thsLimitPool("limit_up/limit_up_pool", false),
+		"opened-limit-ths":     s.thsLimitPool("limit_up/open_limit_pool", false),
+		"limit-down-ths":       s.thsLimitPool("limit_up/limit_up_pool", true),
+		"limit-down-xuangu":    s.xuanguLimitDown,
 		"leaderboard-kaipanla": s.kaipanlaLeaderboard, "calendar-eastmoney": s.eastmoneyCalendar,
-		"leaderboard": s.leaderboard, "margin": s.margin,
+		"leaderboard-sina": s.sinaLeaderboard,
+		"calendar-ths":     s.thsCalendar,
+		"calendar-sina":    s.sinaCalendar,
+		"leaderboard":      s.leaderboard, "margin": s.margin,
 		"daily": s.daily, "minute": s.minute,
 		"stock-quote": s.stockQuote, "stock-minute": s.stockMinute, "stock-five-day": s.stockFiveDay,
 		"stock-daily": s.kline("day"), "stock-weekly": s.kline("week"), "stock-monthly": s.kline("month"),
-		"stock-valuation":    s.stockValuation,
-		"market-history":     s.marketHistory,
-		"market-history-ths": s.thsMarketHistory,
-		"concept-members":    s.conceptMembers,
-		"concept-news":       s.conceptNews,
-		"region-fund-flow":   s.regionFundFlow,
-		"board-members":      s.boardMembers,
+		"stock-valuation":          s.stockValuation,
+		"market-history":           s.marketHistory,
+		"market-history-ths":       s.thsMarketHistory,
+		"market-history-sina":      s.sinaMarketHistory,
+		"market-history-eastmoney": s.eastmoneyMarketHistory,
+		"concept-members":          s.conceptMembers,
+		"concept-news":             s.conceptNews,
+		"region-fund-flow":         s.regionFundFlow,
+		"region-fund-flow-sina":    s.sinaRegionFundFlow,
+		"region-fund-flow-ths":     s.thsRegionFundFlow,
+		"board-members":            s.boardMembers,
 	}
 	loader, ok := loaders[feed]
 	if !ok {
@@ -130,11 +142,11 @@ func (s *MarketService) Feed(ctx context.Context, feed, symbol, date string) (Ma
 	arg := ""
 	switch feed {
 	case "board-members":
-		if !eastmoneyBoardCode.MatchString(symbol) && !sinaIndustryCode.MatchString(symbol) {
+		if !eastmoneyBoardCode.MatchString(symbol) && !sinaIndustryCode.MatchString(symbol) && !sinaRegionCode.MatchString(symbol) {
 			return MarketDataset{}, ErrMarketQuery
 		}
 		arg = symbol
-	case "market-history", "market-history-ths":
+	case "market-history", "market-history-ths", "market-history-sina", "market-history-eastmoney":
 		if _, _, ok := historyPeriod(date, now); !ok {
 			return MarketDataset{}, ErrMarketQuery
 		}
@@ -175,7 +187,8 @@ func (s *MarketService) Feed(ctx context.Context, feed, symbol, date string) (Ma
 			return MarketDataset{}, ErrMarketQuery
 		}
 		arg = symbol
-	case "limit-up", "limit-down", "opened-limit", "limit-up-ths", "opened-limit-ths", "leaderboard", "leaderboard-kaipanla", "calendar", "calendar-eastmoney":
+	case "limit-up", "limit-down", "opened-limit", "limit-up-ths", "opened-limit-ths", "limit-down-ths", "limit-down-xuangu",
+		"leaderboard", "leaderboard-kaipanla", "leaderboard-sina", "calendar", "calendar-eastmoney", "calendar-ths", "calendar-sina":
 		arg = date
 		if arg == "" {
 			arg = now.Format(time.DateOnly)
@@ -184,7 +197,7 @@ func (s *MarketService) Feed(ctx context.Context, feed, symbol, date string) (Ma
 		if err != nil || parsed.Format(time.DateOnly) != arg || arg < now.AddDate(0, 0, -120).Format(time.DateOnly) || arg > now.Format(time.DateOnly) {
 			return MarketDataset{}, ErrMarketQuery
 		}
-		if (feed == "leaderboard" || feed == "leaderboard-kaipanla") && date == "" {
+		if strings.HasPrefix(feed, "leaderboard") && date == "" {
 			arg = ""
 		}
 	}
@@ -195,9 +208,10 @@ func (s *MarketService) Feed(ctx context.Context, feed, symbol, date string) (Ma
 		ttl = 20 * time.Second
 	case "stock-valuation":
 		ttl = 30 * time.Minute
-	case "market-history", "market-history-ths":
+	case "market-history", "market-history-ths", "market-history-sina", "market-history-eastmoney":
 		ttl = 15 * time.Minute
-	case "daily", "margin", "calendar", "calendar-eastmoney", "leaderboard", "leaderboard-kaipanla", "concept-news":
+	case "daily", "margin", "calendar", "calendar-eastmoney", "calendar-ths", "calendar-sina",
+		"leaderboard", "leaderboard-kaipanla", "leaderboard-sina", "concept-news", "region-fund-flow-sina":
 		ttl = 5 * time.Minute
 	}
 	return s.cached(ctx, feed+":"+arg, ttl, loader, arg)
@@ -288,6 +302,9 @@ func (s *MarketService) request(ctx context.Context, endpoint string, query url.
 	}
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 	switch req.URL.Host {
+	case "8.push2his.eastmoney.com", "push2his.eastmoney.com":
+		req.Header.Set("Referer", eastmoneyHistoryURL)
+		req.Header.Set("User-Agent", "Mozilla/5.0")
 	case "push2test.eastmoney.com", "20.push2.eastmoney.com":
 		req.Header.Set("Referer", "https://data.eastmoney.com/")
 		req.Header.Set("User-Agent", "Mozilla/5.0")

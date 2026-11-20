@@ -3,23 +3,25 @@ package service
 import (
 	"context"
 	"fmt"
-	"html"
 	"math"
 	"net/url"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 )
 
 const thsIndustryURL = "https://q.10jqka.com.cn/thshy/"
+const thsRegionURL = "https://q.10jqka.com.cn/dy/"
 const thsConceptQuotesURL = "https://data.10jqka.com.cn/funds/gnzjl/"
 const thsPoolURL = "https://data.10jqka.com.cn/limit_up/"
 
-var thsTableRow = regexp.MustCompile(`(?is)<tr\b[^>]*>(.*?)</tr>`)
-var thsTableCell = regexp.MustCompile(`(?is)<td\b[^>]*>(.*?)</td>`)
+var marketHTMLRow = regexp.MustCompile(`(?is)<tr\b[^>]*>(.*?)</tr>`)
+var marketHTMLCell = regexp.MustCompile(`(?is)<td\b[^>]*>(.*?)</td>`)
 var thsIndustryPath = regexp.MustCompile(`/thshy/detail/code/(\d{6})/`)
 var thsConceptPath = regexp.MustCompile(`/gn/detail/code/(\d{6})/`)
+var thsRegionPath = regexp.MustCompile(`/dy/detail/code/(\d{6})/`)
 var thsLeaderPath = regexp.MustCompile(`stockpage\.10jqka\.com\.cn/(\d{6})/`)
 var thsIndustryPagination = regexp.MustCompile(`class="page_info"[^>]*>\d+/(\d+)`)
 
@@ -32,19 +34,38 @@ func marketYi(value string) *float64 {
 }
 
 func (s *MarketService) thsIndustry(ctx context.Context, _ string) (MarketDataset, error) {
-	return s.thsBoardTable(ctx, false)
+	return s.thsBoardTable(ctx, "industry")
 }
 
 func (s *MarketService) thsConceptQuotes(ctx context.Context, _ string) (MarketDataset, error) {
-	return s.thsBoardTable(ctx, true)
+	return s.thsBoardTable(ctx, "concept")
 }
 
-func (s *MarketService) thsBoardTable(ctx context.Context, concept bool) (MarketDataset, error) {
+func (s *MarketService) thsRegionFundFlow(ctx context.Context, _ string) (MarketDataset, error) {
+	out, err := s.thsBoardTable(ctx, "region")
+	if err != nil {
+		return MarketDataset{}, err
+	}
+	rows := thsRankFundRows(out.Rows)
+	if !slices.ContainsFunc(rows, func(row MarketRow) bool { return row.Amount != nil && *row.Amount > 0 }) {
+		out.Rows = nil
+		out.Message = "同花顺尚未发布可用的区域成交及资金数据。"
+		return out, nil
+	}
+	out.Rows = rows
+	return out, nil
+}
+
+func (s *MarketService) thsBoardTable(ctx context.Context, kind string) (MarketDataset, error) {
 	base, pagePath, boardPath := thsIndustryURL, "index/field/199112/order/desc/page/%d/", thsIndustryPath
-	boardURL, changeCell, netCell, leaderCell := thsIndustryURL+"detail/code/", 2, 5, 9
-	if concept {
+	changeCell, netCell, leaderCell := 2, 5, 9
+	boardURL := thsIndustryURL + "detail/code/"
+	switch kind {
+	case "concept":
 		base, pagePath, boardPath = thsConceptQuotesURL, "field/tradezdf/order/asc/page/%d/", thsConceptPath
 		boardURL, changeCell, netCell, leaderCell = thsCatalogURL+"detail/code/", 3, 6, 8
+	case "region":
+		base, boardPath, boardURL = thsRegionURL, thsRegionPath, thsRegionURL+"detail/code/"
 	}
 	out := MarketDataset{Source: "同花顺", SourceURL: base}
 	seen := make(map[string]bool)
@@ -69,8 +90,8 @@ func (s *MarketService) thsBoardTable(ctx context.Context, concept bool) (Market
 			totalPages, _ = strconv.Atoi(match[1])
 		}
 		before := len(out.Rows)
-		for _, tr := range thsTableRow.FindAllStringSubmatch(markup, -1) {
-			cells := thsTableCell.FindAllStringSubmatch(tr[1], -1)
+		for _, tr := range marketHTMLRow.FindAllStringSubmatch(markup, -1) {
+			cells := marketHTMLCell.FindAllStringSubmatch(tr[1], -1)
 			if len(cells) < 10 {
 				continue
 			}
@@ -79,14 +100,12 @@ func (s *MarketService) thsBoardTable(ctx context.Context, concept bool) (Market
 				continue
 			}
 			seen[match[1]] = true
-			plain := func(i int) string {
-				return strings.TrimSpace(html.UnescapeString(flashMarkup.ReplaceAllString(cells[i][1], "")))
-			}
+			plain := func(i int) string { return marketCellText(cells[i][1]) }
 			row := MarketRow{
 				Code: match[1], Name: plain(1), Change: marketNumber(strings.TrimSuffix(plain(changeCell), "%")),
 				Net: marketYi(plain(netCell)), URL: boardURL + match[1] + "/",
 			}
-			if !concept {
+			if kind != "concept" {
 				row.Amount = marketYi(plain(4))
 			}
 			if leader := thsLeaderPath.FindStringSubmatch(cells[leaderCell][1]); len(leader) > 0 {
@@ -102,7 +121,7 @@ func (s *MarketService) thsBoardTable(ctx context.Context, concept bool) (Market
 	if len(out.Rows) == 0 {
 		return MarketDataset{}, errMarketData
 	}
-	if concept {
+	if kind == "concept" {
 		sort.SliceStable(out.Rows, func(i, j int) bool {
 			a, b := out.Rows[i].Change, out.Rows[j].Change
 			return a != nil && (b == nil || *a > *b)
@@ -116,27 +135,34 @@ func (s *MarketService) thsFundFlow(ctx context.Context, _ string) (MarketDatase
 	if err != nil || out.Status != "ready" {
 		return MarketDataset{}, errMarketData
 	}
-	rows := make([]MarketRow, 0, len(out.Rows))
-	for _, row := range out.Rows {
+	out.Rows = thsRankFundRows(out.Rows)
+	if len(out.Rows) == 0 {
+		return MarketDataset{}, errMarketData
+	}
+	return out, nil
+}
+
+func thsRankFundRows(input []MarketRow) []MarketRow {
+	rows := make([]MarketRow, 0, len(input))
+	for _, row := range input {
 		if row.Net != nil {
 			rows = append(rows, row)
 		}
 	}
-	if len(rows) == 0 {
-		return MarketDataset{}, errMarketData
-	}
 	sort.SliceStable(rows, func(i, j int) bool { return *rows[i].Net > *rows[j].Net })
-	out.Rows = rows
-	return out, nil
+	return rows
 }
 
-func (s *MarketService) thsLimitPool(path string) marketLoader {
+func (s *MarketService) thsLimitPool(path string, downCount bool) marketLoader {
 	return func(ctx context.Context, date string) (MarketDataset, error) {
 		type reply struct {
 			Status int `json:"status_code"`
 			Data   *struct {
 				Date string
 				Page struct{ Total int }
+				Down struct {
+					Today struct{ Num *int }
+				} `json:"limit_down_count"`
 				Info []struct {
 					Code, Name string
 					Count      *int   `json:"high_days_value"`
@@ -158,6 +184,14 @@ func (s *MarketService) thsLimitPool(path string) marketLoader {
 			}
 			if data.Data.Date != compact {
 				return MarketDataset{}, errMarketSession
+			}
+			if downCount {
+				count := data.Data.Down.Today.Num
+				if count == nil || *count < 0 {
+					return MarketDataset{}, errMarketData
+				}
+				out.Rows = []MarketRow{{Code: date, Name: "跌停家数", Date: date, Count: count}}
+				return out, nil
 			}
 			out.Total = &data.Data.Page.Total
 			for _, item := range data.Data.Info {

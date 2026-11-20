@@ -19,6 +19,7 @@ export const navRouter: NavRouter[] = [
   { id: "home", name: "首页", path: ROUTER_PATH.home },
   { id: "data", name: "数据", path: ROUTER_PATH.data },
   { id: "hotspots", name: "热点", path: ROUTER_PATH.hotspots, forAllUsers: true },
+  { id: "market-review", name: "复盘", path: ROUTER_PATH.marketReview, forAllUsers: true },
   { id: "research", name: "查询", path: ROUTER_PATH.research, forAllUsers: true },
   {
     id: "subscribe",

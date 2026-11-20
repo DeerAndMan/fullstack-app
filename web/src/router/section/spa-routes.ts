@@ -23,6 +23,7 @@ export const spaRoutes: SPARouteItem[] = [
   { path: "/research/skills", title: "Skill 管理" },
   { path: ROUTER_PATH.research, title: "题材查询" },
   { path: ROUTER_PATH.hotspots, title: "热点" },
+  { path: ROUTER_PATH.marketReview, title: "复盘" },
   { path: ROUTER_PATH.hotspotStock, title: "个股行情" },
   { path: "/ws", title: "WebSocket" },
   { path: "/subscribe", title: "订阅首页" },

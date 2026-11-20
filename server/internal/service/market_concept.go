@@ -36,12 +36,16 @@ func (s *MarketService) loadSinaBoardMembers(ctx context.Context, code string, f
 
 	out := MarketDataset{Source: "新浪财经", Total: &total}
 	const pageSize = 80
+	maxPages := 10
+	if sinaRegionCode.MatchString(code) {
+		maxPages = 20
+	}
 	seen := make(map[string]bool)
 	endpoint, node := sinaMarketCenter+"getHQNodeData", "node"
 	if funds {
 		endpoint, node = sinaMoneyFlow+"ssl_bkzj_ssggzj", "bankuai"
 	}
-	for page := 1; (page-1)*pageSize < total && page <= 10; page++ {
+	for page := 1; (page-1)*pageSize < total && page <= maxPages; page++ {
 		list, err := marketJSON[[]member](ctx, s, endpoint, url.Values{
 			"page": {strconv.Itoa(page)}, "num": {strconv.Itoa(pageSize)}, "sort": {"symbol"}, "asc": {"1"}, node: {code},
 		})

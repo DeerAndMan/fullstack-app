@@ -1,10 +1,10 @@
-import { useState } from "react";
 import { ReloadOutlined } from "@ant-design/icons";
 import { Button, Segmented } from "antd";
 
 import { useMarketFeed } from "./data";
 import { FeedPanel } from "./panels";
 import { useFlashRefresh } from "./flash-refresh";
+import { useRememberedMarketSource } from "./source";
 import styles from "./hotspots.module.css";
 
 const sources = [
@@ -14,13 +14,11 @@ const sources = [
   { value: "flash-ths", label: "同花顺" },
 ] as const;
 
-type FlashFeed = typeof sources[number]["value"];
-
 const routineIndexQuote = /^(?:香港|美国|日本|欧洲)?(?:A股|港股|美股|三大(?:股指|指数)|沪深(?:两市|三大指数)|沪指|上证(?:指数|综指)|深证成指|创业板指|科创50|沪深300|恒生(?:科技)?指数|纳斯达克(?:指数)?|道琼斯(?:指数)?|标普500(?:指数)?|日经225(?:指数)?)[^。；：]{0,16}(?:涨|跌|高开|低开|开盘|收盘|点位)/;
 const routineEtfQuote = /^(?:部分)?(?:宽基|沪深300|中证(?:500|1000|2000)|上证50|科创50|创业板)\s*ETF[^。；：]{0,15}(?:放量|缩量|成交|涨|跌|开盘|收盘)/i;
 
 export function Headlines({ compact = false }: { compact?: boolean }) {
-  const [feed, setFeed] = useState<FlashFeed>(sources[0].value);
+  const [feed, setFeed] = useRememberedMarketSource("flashSource", sources);
   const query = useMarketFeed(feed);
   const { active, afterCutoff, countdown, toggle } = useFlashRefresh(feed, query);
   const countingDown = active && !query.isFetching && typeof countdown === "number";

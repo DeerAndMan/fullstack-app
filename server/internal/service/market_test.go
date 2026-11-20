@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 type marketTestTransport func(*http.Request) (*http.Response, error)
@@ -16,13 +17,73 @@ func marketTestResponse(req *http.Request, status int, body string) *http.Respon
 	return &http.Response{Request: req, StatusCode: status, Body: io.NopCloser(strings.NewReader(body))}
 }
 
+func TestXuanguLimitDownRejectsAnotherSessionsStocks(t *testing.T) {
+	t.Parallel()
+	svc := NewMarketService()
+	svc.client.Transport = marketTestTransport(func(req *http.Request) (*http.Response, error) {
+		return marketTestResponse(req, http.StatusOK, `{"code":20000,"data":[{"symbol":"600031.SH","stock_chi_name":"示例","last_limit_down":1795068495}]}`), nil
+	})
+	// The timestamp is on November 19 in Beijing.
+	if _, err := svc.xuanguLimitDown(context.Background(), "2026-11-18"); err != errMarketSession {
+		t.Fatalf("wrong session returned %v", err)
+	}
+	got, err := svc.xuanguLimitDown(context.Background(), "2026-11-19")
+	if err != nil || len(got.Rows) != 1 || got.Rows[0].Symbol != "sh600031" {
+		t.Fatalf("expected same-session stock, got %+v, %v", got, err)
+	}
+}
+
+func TestSinaRegionFlowOmitsIncompleteRegions(t *testing.T) {
+	t.Parallel()
+	svc := NewMarketService()
+	svc.client.Transport = marketTestTransport(func(req *http.Request) (*http.Response, error) {
+		switch {
+		case strings.HasSuffix(req.URL.Path, "/newFLJK.php"):
+			return marketTestResponse(req, http.StatusOK, `var S_Finance_bankuai_area = {
+				"diyu_110000":"diyu_110000,Beijing,2,1,1,1,1,1,sh600001,1,1,1,Leader",
+				"diyu_120000":"diyu_120000,Tianjin,2,1,1,1,1,1,sh600001,1,1,1,Leader"
+			};`), nil
+		case strings.HasSuffix(req.URL.Path, "getHQNodeStockCount"):
+			return marketTestResponse(req, http.StatusOK, `"2"`), nil
+		case req.URL.Query().Get("bankuai") == "diyu_110000":
+			return marketTestResponse(req, http.StatusOK, `[
+				{"symbol":"sh600031","name":"First","netamount":"100"},
+				{"symbol":"sz000001","name":"Second","netamount":"-20"}
+			]`), nil
+		default:
+			return marketTestResponse(req, http.StatusOK, `[{"symbol":"sz000001","name":"First","netamount":"-20"}]`), nil
+		}
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	got, err := svc.sinaRegionFundFlow(ctx, "")
+	if err != nil || len(got.Rows) != 1 || got.Rows[0].Code != "diyu_110000" || *got.Rows[0].Net != 80 || got.Message == "" {
+		t.Fatalf("expected complete regional total, got %+v, %v", got, err)
+	}
+}
+
+func TestTHSRegionFundFlowSkipsUnpublishedTotals(t *testing.T) {
+	t.Parallel()
+	svc := NewMarketService()
+	svc.client.Transport = marketTestTransport(func(req *http.Request) (*http.Response, error) {
+		return marketTestResponse(req, http.StatusOK, `<table><tr><td>1</td>
+		<td><a href="http://q.10jqka.com.cn/dy/detail/code/882033/">浙江</a></td>
+		<td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>82</td><td>672</td><td>0</td><td>--</td>
+		</tr></table>`), nil
+	})
+	got, err := svc.thsRegionFundFlow(context.Background(), "")
+	if err != nil || len(got.Rows) != 0 || got.SourceURL != thsRegionURL || got.Message == "" {
+		t.Fatalf("expected unpublished regional flow, got %+v, %v", got, err)
+	}
+}
+
 func TestTHSStockPoolsRejectMismatchedDate(t *testing.T) {
 	t.Parallel()
 	svc := NewMarketService()
 	svc.client.Transport = marketTestTransport(func(req *http.Request) (*http.Response, error) {
 		return marketTestResponse(req, http.StatusOK, `{"status_code":0,"data":{"date":"19990101","page":{"total":1},"info":[{"code":"000001","name":"样本"}]}}`), nil
 	})
-	for _, feed := range []string{"limit-up-ths", "opened-limit-ths"} {
+	for _, feed := range []string{"limit-up-ths", "opened-limit-ths", "limit-down-ths"} {
 		got, err := svc.Feed(context.Background(), feed, "", "")
 		if err != nil || got.Status != "unavailable" || len(got.Rows) != 0 {
 			t.Errorf("%s returned a different date: %+v, err = %v", feed, got, err)

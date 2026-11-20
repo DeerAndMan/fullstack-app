@@ -152,7 +152,9 @@ export function SessionDate({ value, onChange, clearable = false }: {
 
 const calendarSources = [
   { value: "calendar", label: "华尔街见闻" },
+  { value: "calendar-sina", label: "新浪财经" },
   { value: "calendar-eastmoney", label: "东方财富" },
+  { value: "calendar-ths", label: "同花顺" },
 ] as const;
 
 export function CalendarPanel() {
@@ -160,16 +162,20 @@ export function CalendarPanel() {
   const [feed, setFeed] = useMarketSource("calendarSource", calendarSources);
   const query = useMarketFeed(feed, { date });
   const eastmoney = feed === "calendar-eastmoney";
+  const ths = feed === "calendar-ths";
+  const note = ths ? "同花顺投资日历按日期展示行业活动、指数调整与其他事件。"
+    : eastmoney ? "展示与所选 7 天窗口重叠的东方财富财经事件。"
+    : "从所选日期起，展示来源标记为 3 级及以上的事件。时间为北京时间。";
   return (
     <FeedPanel title="未来 7 天重点事件" feed={feed} query={query}
-      note={eastmoney
-        ? "展示与所选 7 天窗口重叠的东方财富财经事件。"
-        : "从所选日期起，展示来源标记为 3 级及以上的事件。时间为北京时间。"}
+      note={query.data?.status === "ready" && query.data.message ? note + " " + query.data.message : note}
       extra={<div className={styles.panelActions}>
         <SourcePicker label="重点事件来源" value={feed} options={calendarSources} onChange={setFeed} />
         <SessionDate value={date} onChange={value => value && setDate(value)} />
       </div>}>
-      {rows => eastmoney ? <DataTable key={feed} label="东方财富财经事件" rows={rows} columns={[
+      {rows => ths ? <DataTable key={feed} label="同花顺投资日历" rows={rows} columns={[
+        { title: "日期", field: "date", width: 130 }, { title: "事件", field: "name", width: 350 },
+      ]} /> : eastmoney ? <DataTable key={feed} label="东方财富财经事件" rows={rows} columns={[
         { title: "日期", field: "date", width: 215 }, { title: "类型", field: "detail", width: 100 },
         { title: "事件", field: "name", width: 300 }, { title: "地点", field: "actual", width: 100 },
       ]} /> : <DataTable key={feed} label="重点财经事件" rows={rows.filter(row => (row.count ?? 0) >= 3)} columns={[

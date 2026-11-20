@@ -117,13 +117,15 @@ func (s *MarketService) minute(ctx context.Context, symbol string) (MarketDatase
 const sinaBoards = "https://vip.stock.finance.sina.com.cn/q/view/"
 
 func (s *MarketService) sectors(concept bool) marketLoader {
+	if concept {
+		return s.sinaSectorFeed("newFLJK.php", url.Values{"param": {"class"}})
+	}
+	return s.sinaSectorFeed("newSinaHy.php", nil)
+}
+
+func (s *MarketService) sinaSectorFeed(path string, query url.Values) marketLoader {
 	return func(ctx context.Context, _ string) (MarketDataset, error) {
-		endpoint := sinaBoards + "newSinaHy.php"
-		var query url.Values
-		if concept {
-			endpoint = sinaBoards + "newFLJK.php"
-			query = url.Values{"param": {"class"}}
-		}
+		endpoint := sinaBoards + path
 		body, err := s.request(ctx, endpoint, query)
 		if err != nil {
 			return MarketDataset{}, err

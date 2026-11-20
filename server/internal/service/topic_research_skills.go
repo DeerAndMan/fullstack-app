@@ -11,6 +11,7 @@ type ResearchSkill struct {
 }
 
 const (
+	skillMarketReview    = "builtin:a-share-market-review"
 	skillOrderConversion = "builtin:order-conversion"
 	skillIndustryCycle   = "builtin:industry-cycle"
 	skillCounterEvidence = "builtin:counter-evidence"
@@ -18,6 +19,7 @@ const (
 
 func initialResearchSkills() []ResearchSkill {
 	return []ResearchSkill{
+		{ID: skillMarketReview, Name: "A 股强势股复盘", Instructions: `按用户指定的交易日查询沪深 A 股复盘归档。读图先看市场参与度，再看新高家数、板块容量与强度、新高风格和个股回调。P0 提供上涨家数、250 日新高家数、沪深 300 收盘在 50 日均线上方的比例。上涨按当日涨跌幅严格大于零，含 ST、排除北交所。新高按复权最高价严格超过之前 249 根有效日线的最高价，同高不计。50 日均线含当日，用当日成份与有效样本作分母。输出日期、来源、家数、分子分母、缺数和排除原因，有明细时按代码核对。普跌且新高增加可作为背离观察。冰点和沸点仅描述当下市场。后续形态需结合题材、板块、成交与信号位置，清楚区分信号日、触发日和事后表现。未归档日期如实说明，可在强势股复盘页查看可查日期及明细。`},
 		{
 			ID: "builtin:verification", Name: "交叉核验",
 			DefaultSelected: true,

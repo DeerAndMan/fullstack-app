@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Alert, DatePicker } from "antd";
 import dayjs from "dayjs";
 import { displayMarketDate, hotspotDatePicker } from "./calendar";
-import { DataTable, FeedPanel } from "./panels";
+import { Change, DataTable, FeedPanel } from "./panels";
 import { localDate, useMarketFeed } from "./data";
 import { SourcePicker, useMarketSource } from "./source";
 import type { MarketRow } from "./data";
@@ -226,8 +226,48 @@ function HistoryTrends({ rows, amountOnly }: { rows: MarketRow[]; amountOnly: bo
   );
 }
 
+const indexSeries = [
+  { name: "上证综指", field: "shanghaiChange", color: "#397c94" },
+  { name: "深证综指", field: "shenzhenChange", color: "#835eaa" },
+] as const;
+
+function IndexChanges({ rows }: { rows: MarketRow[] }) {
+  const maxChange = Math.max(1, ...rows.flatMap(row => indexSeries.map(series => Math.abs(row[series.field] ?? 0))));
+  const x = (index: number) => rows.length < 2 ? 480 : 55 + 855 * index / (rows.length - 1);
+  const y = (change: number) => 104 - 78 * change / maxChange;
+  const tickIndices = new Set(Array.from({ length: 5 }, (_, i) => Math.round(i * (rows.length - 1) / 4)));
+  return <>
+    <div className={styles.scroll}>
+      <svg viewBox="0 0 960 228" role="img" aria-label="上证综指与深证综指日涨跌幅，逐日数值见下方明细。">
+        {[maxChange, 0, -maxChange].map(change => <g key={change}>
+          <line x1="55" x2="910" y1={y(change)} y2={y(change)} stroke="currentColor" opacity=".22" />
+          <text x="47" y={y(change) + 4} textAnchor="end">{change.toFixed(1)}%</text>
+        </g>)}
+        {indexSeries.map(series => <polyline key={series.field}
+          points={rows.map((row, index) => `${x(index)},${y(row[series.field] ?? 0)}`).join(" ")}
+          fill="none" stroke={series.color} strokeWidth="2" />)}
+        {rows.length === 1 && indexSeries.map(series => <circle key={series.field}
+          cx={x(0)} cy={y(rows[0][series.field] ?? 0)} r="4" fill={series.color} />)}
+        {[...tickIndices].map(index => <text key={index} x={x(index)} y="209" textAnchor="middle">
+          {displayMarketDate(rows[index].date, false)}
+        </text>)}
+      </svg>
+    </div>
+    <p className={styles.note}>{indexSeries.map(series => <span key={series.field} style={{ color: series.color }}>● {series.name}　</span>)}</p>
+    <details>
+      <summary>逐日指数涨跌幅</summary>
+      <DataTable label="逐日指数涨跌幅" rows={rows.slice().reverse()} columns={[
+        { title: "交易日", field: "date" },
+        ...indexSeries.map(series => ({ title: series.name, field: series.field, render: (row: MarketRow) => <Change value={row[series.field]} /> })),
+      ]} />
+    </details>
+  </>;
+}
+
 const historySources = [
   { value: "market-history", label: "开盘啦及备用来源" },
+  { value: "market-history-sina", label: "新浪财经" },
+  { value: "market-history-eastmoney", label: "东方财富" },
   { value: "market-history-ths", label: "同花顺" },
 ] as const;
 
@@ -239,14 +279,17 @@ export function MarketHistory() {
   const today = dayjs(localDate());
   const [feed, setFeed] = useMarketSource("historySource", historySources);
   const query = useMarketFeed(feed, period ? { date: period } : undefined);
-  const amountOnly = feed === "market-history-ths";
+  const indexChanges = feed === "market-history-sina";
+  const amountOnly = feed === "market-history-ths" || feed === "market-history-eastmoney";
   return (
     <FeedPanel
       title="市场历史冷热"
       feed={feed}
       query={query}
       extra={<SourcePicker label="历史冷热来源" value={feed} options={historySources} onChange={setFeed} />}
-      note={amountOnly ? "同花顺指数日线提供成交额。情绪分与涨跌家数可在开盘啦来源查看。" : undefined}
+      note={indexChanges
+        ? "按新浪财经指数日线收盘价计算上证综指和深证综指的日涨跌幅。"
+        : amountOnly ? "成交额取上证综指和深证综指日线之和。情绪分与涨跌家数可在开盘啦来源查看。" : undefined}
       controls={
         <div className={styles.filters}>
           <span>查询区间</span>
@@ -282,7 +325,9 @@ export function MarketHistory() {
         </div>
       }
     >
-      {rows => <HistoryTrends key={`${feed}:${period}`} rows={rows} amountOnly={amountOnly} />}
+      {rows => indexChanges ? <IndexChanges rows={rows} /> : (
+        <HistoryTrends key={`${feed}:${period}`} rows={rows} amountOnly={amountOnly} />
+      )}
     </FeedPanel>
   );
 }

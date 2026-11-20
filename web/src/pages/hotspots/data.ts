@@ -5,6 +5,7 @@ import { RequestGet } from "@/api/request-schema";
 import { apiPathsV1 } from "@/api/paths/v1";
 
 const rowSchema = z.object({
+  shanghaiChange: z.number().optional(), shenzhenChange: z.number().optional(),
   peTtm: z.number().optional(),
   pbMrq: z.number().optional(),
   psTtm: z.number().optional(),
@@ -60,6 +61,8 @@ export function isStockSymbol(symbol?: string): symbol is string {
 export const marketFeeds = {
   "market-history": "https://www.kaipanla.com/omain/",
   "market-history-ths": "https://stockpage.10jqka.com.cn/1A0001/",
+  "market-history-sina": "https://finance.sina.com.cn/realstock/company/sh000001/nc.shtml",
+  "market-history-eastmoney": "https://quote.eastmoney.com/sh000001.html",
   indices: "https://gu.qq.com/",
   industry: "https://stocks.sina.cn/sh/fieldranking?type=sina&vt=4",
   concept: "https://finance.sina.com.cn/stock/",
@@ -81,10 +84,14 @@ export const marketFeeds = {
   "fund-flow-sina": "https://vip.stock.finance.sina.com.cn/moneyflow/#blocktol_zjh",
   "fund-flow-ths": "https://q.10jqka.com.cn/thshy/",
   "region-fund-flow": "https://data.eastmoney.com/bkzj/dy.html",
+  "region-fund-flow-sina": "https://vip.stock.finance.sina.com.cn/mkt/#diyu",
+  "region-fund-flow-ths": "https://q.10jqka.com.cn/dy/",
   "board-members": "https://finance.sina.com.cn/stock/",
   "limit-up": "https://quote.eastmoney.com/ztb/ranklist.html",
   "limit-up-ths": "https://data.10jqka.com.cn/limit_up/",
   "limit-down": "https://quote.eastmoney.com/ztb/ranklist.html",
+  "limit-down-ths": "https://data.10jqka.com.cn/limit_up/",
+  "limit-down-xuangu": "https://xuangubao.com.cn/",
   "opened-limit": "https://quote.eastmoney.com/ztb/ranklist.html",
   "opened-limit-ths": "https://data.10jqka.com.cn/limit_up/",
   flash: "https://wallstreetcn.com/live",
@@ -94,8 +101,11 @@ export const marketFeeds = {
   "flash-ths": "https://stock.10jqka.com.cn/",
   calendar: "https://wallstreetcn.com/calendar",
   "calendar-eastmoney": "https://emdata.eastmoney.com/cjrl/index.html",
+  "calendar-sina": "https://finance.sina.com.cn/stock/usstock/",
+  "calendar-ths": "https://stock.10jqka.com.cn/fincalendar.shtml",
   leaderboard: "https://data.eastmoney.com/stock/lhb.html",
   "leaderboard-kaipanla": "https://www.kaipanla.com/omain/",
+  "leaderboard-sina": "https://vip.stock.finance.sina.com.cn/q/go.php/vInvestConsult/kind/lhb/index.phtml",
 } as const;
 
 export type MarketFeed = keyof typeof marketFeeds;

@@ -65,8 +65,8 @@ function FocusList({ items, empty }: {
 function FundFlowNote({ source, region }: { source?: string; region?: boolean }) {
   if (!source) return null;
   const notes: Record<string, string> = {
-    新浪财经: "新浪财经行业资金净额口径。",
-    同花顺: "同花顺行业净流入口径。",
+    新浪财经: region ? "按新浪财经地域板块成分股的资金净额汇总。" : "新浪财经行业资金净额口径。",
+    同花顺: region ? "同花顺地域板块净流入口径，各板块按来源分类展示。" : "同花顺行业净流入口径。",
     东方财富: `东方财富${region ? "地域板块" : "行业"}主力资金估算口径。`,
   };
   return notes[source] ? <p className={styles.note}>{notes[source]}</p> : null;
@@ -207,11 +207,18 @@ function Boards() {
   );
 }
 
+const regionSources = [
+  { value: "region-fund-flow", label: "东方财富" },
+  { value: "region-fund-flow-sina", label: "新浪财经" },
+  { value: "region-fund-flow-ths", label: "同花顺" },
+] as const;
+
 function FundFlow() {
   const [params, setParams] = useSearchParams();
-  const region = params.get("fund") === "region" || params.get("boardFeed") === "region-fund-flow";
+  const region = params.get("fund") === "region" || params.get("boardFeed")?.startsWith("region-fund-flow");
   const [industryFeed, setIndustryFeed] = useMarketSource("fundSource", fundSources);
-  const feed = region ? "region-fund-flow" : industryFeed;
+  const [regionFeed, setRegionFeed] = useMarketSource("regionSource", regionSources);
+  const feed = region ? regionFeed : industryFeed;
   const selectedDirection = params.get("flow");
   const defaultDirection = region ? "all" : "in";
   const direction = selectedDirection === "out" || selectedDirection === "all" || selectedDirection === "in"
@@ -228,7 +235,8 @@ function FundFlow() {
         else next.delete("fund");
         return next;
       }, { replace: true })} options={[{ label: "行业", value: "industry" }, { label: "区域", value: "region" }]} />
-        {!region && <SourcePicker label="行业资金来源" value={industryFeed} options={fundSources} onChange={setIndustryFeed} />}
+        {region ? <SourcePicker label="区域资金来源" value={regionFeed} options={regionSources} onChange={setRegionFeed} />
+          : <SourcePicker label="行业资金来源" value={industryFeed} options={fundSources} onChange={setIndustryFeed} />}
       </div>}
       controls={<>
         <Segmented aria-label="资金流向" className={styles.topControls} value={direction} onChange={value => setParams(previous => {
@@ -246,10 +254,11 @@ function FundFlow() {
           : rows.filter(row => (row.net ?? 0) < 0).reverse();
         return <DataTable key={`${feed}:${direction}`} label={title} rows={ranked}
           columns={[
-            { ...nameColumn, render: row => feed === "fund-flow-ths"
+            { ...nameColumn, render: row => feed === "fund-flow-ths" || feed === "region-fund-flow-ths"
               ? <a href={row.url} target="_blank" rel="noreferrer">{row.name}</a>
               : <Link to={boardHref(feed, row.code, params)}>{row.name}</Link> },
             { title: netTitle, field: "net", money: true }, changeColumn,
+            ...(feed === "region-fund-flow-sina" ? [{ title: "纳入股票", field: "count" } as const] : []),
           ]} />;
       }}
     </FeedPanel>
@@ -284,6 +293,11 @@ const openedSources = [
   { value: "opened-limit", label: "东方财富" },
   { value: "opened-limit-ths", label: "同花顺" },
 ] as const;
+const downSources = [
+  { value: "limit-down", label: "东方财富" },
+  { value: "limit-down-xuangu", label: "选股宝" },
+  { value: "limit-down-ths", label: "同花顺 · 家数" },
+] as const;
 
 function LimitPools() {
   const [params, setParams] = useSearchParams();
@@ -291,8 +305,11 @@ function LimitPools() {
   const poolKind = pool === "opened-limit" || pool === "limit-down" ? pool : "limit-up";
   const [upFeed, setUpFeed] = useMarketSource("upSource", limitSources);
   const [openedFeed, setOpenedFeed] = useMarketSource("openedSource", openedSources);
-  const feed = poolKind === "limit-up" ? upFeed : poolKind === "opened-limit" ? openedFeed : poolKind;
+  const [downFeed, setDownFeed] = useMarketSource("downSource", downSources);
+  const feed = poolKind === "limit-up" ? upFeed : poolKind === "opened-limit" ? openedFeed : downFeed;
   const ths = feed === "limit-up-ths" || feed === "opened-limit-ths";
+  const countOnly = feed === "limit-down-ths";
+  const xuangu = feed === "limit-down-xuangu";
   const selectedDate = params.get("poolDate") ?? undefined;
   const indices = useMarketFeed("indices");
   const date = selectedDate ?? marketSession(indices.data?.rows);
@@ -302,15 +319,16 @@ function LimitPools() {
       extra={<div className={styles.panelActions}>
         {poolKind === "limit-up" && <SourcePicker label="涨停股池来源" value={upFeed} options={limitSources} onChange={setUpFeed} />}
         {poolKind === "opened-limit" && <SourcePicker label="炸板股池来源" value={openedFeed} options={openedSources} onChange={setOpenedFeed} />}
+        {poolKind === "limit-down" && <SourcePicker label="跌停股池来源" value={downFeed} options={downSources} onChange={setDownFeed} />}
         <SessionDate value={date} onChange={value => setParams(previous => {
         const next = new URLSearchParams(previous);
         if (value) next.set("poolDate", value);
         else next.delete("poolDate");
         return next;
       }, { replace: true })} clearable={Boolean(selectedDate)} /></div>}
-      note={ths ? query.data?.message || (poolKind === "limit-up"
+      note={countOnly ? "同花顺提供当日跌停家数。个股名单可切换至东方财富或选股宝。" : ths ? query.data?.message || (poolKind === "limit-up"
         ? "同花顺股池展示股票、代码及来源已披露的连板数。"
-        : "同花顺炸板池展示股票和代码。") : undefined}
+        : "同花顺炸板池展示股票和代码。") : query.data?.status === "ready" ? query.data.message : undefined}
       controls={<Segmented
         aria-label="股池类型"
         className={styles.topControls}
@@ -323,7 +341,12 @@ function LimitPools() {
         }, { replace: true })}
         options={Object.entries(poolLabels).map(([value, label]) => ({ value: value as keyof typeof poolLabels, label }))}
       />}>
-      {rows => (
+      {rows => countOnly ? (
+        <div className={styles.chartToolbar}>
+          <strong>跌停 {rows[0].count ?? "—"} 家</strong>
+          <span className={styles.muted}>数据日 {date}</span>
+        </div>
+      ) : (
         <>
           <div className={styles.chartToolbar}>
             <span>{poolLabels[poolKind]} {query.data?.total ?? rows.length} 只</span>
@@ -332,9 +355,10 @@ function LimitPools() {
           {poolKind === "limit-up" && <LimitBreakdown rows={rows} withIndustries={!ths} />}
           <DataTable key={feed} label={`${poolLabels[poolKind]}-${date}`} rows={rows} search columns={[
             codeColumn, stockNameColumn,
-            ...(ths ? [] : [{ title: "行业", field: "detail", width: 115 } as const, priceColumn, changeColumn]),
+            ...(ths || xuangu ? [] : [{ title: "行业", field: "detail", width: 115 } as const]),
+            ...(ths ? [] : [priceColumn, changeColumn]),
             ...(poolKind === "limit-up" ? [{ title: "连板数", field: "count" } as const] : []),
-            ...(ths ? [] : [amountColumn]),
+            ...(xuangu ? [{ title: "连续跌停", field: "count" } as const] : ths ? [] : [amountColumn]),
           ]} />
         </>
       )}
@@ -345,6 +369,7 @@ function LimitPools() {
 const leaderboardSources = [
   { value: "leaderboard", label: "东方财富" },
   { value: "leaderboard-kaipanla", label: "开盘啦" },
+  { value: "leaderboard-sina", label: "新浪财经" },
 ] as const;
 
 function Leaderboard() {
@@ -353,9 +378,12 @@ function Leaderboard() {
   const [feed, setFeed] = useMarketSource("leaderSource", leaderboardSources);
   const query = useMarketFeed(feed, { date });
   const kpl = feed === "leaderboard-kaipanla";
+  const sina = feed === "leaderboard-sina";
   return (
     <FeedPanel title="个股龙虎榜" feed={feed} query={query}
-      note={kpl ? "开盘啦按股票汇总上榜记录，最多显示 100 只。" : "按披露净买额排序，最多展示 100 条上榜记录。同一股票可能因不同原因多次上榜。"}
+      note={sina ? "新浪财经按上榜原因分组，展示收盘价和成交额。"
+        : kpl ? "开盘啦按股票汇总上榜记录，最多显示 100 只。"
+        : "按披露净买额排序，最多展示 100 条上榜记录。同一股票可能因不同原因多次上榜。"}
       extra={<div className={styles.panelActions}>
         <SourcePicker label="龙虎榜来源" value={feed} options={leaderboardSources} onChange={setFeed} />
         <SessionDate value={date} onChange={value => setParams(previous => {
@@ -366,8 +394,10 @@ function Leaderboard() {
       }, { replace: true })} clearable /></div>}
     >
       {rows => <DataTable label={`个股龙虎榜-${rows[0].date ?? ""}`} rows={rows} search columns={[
-        { title: "交易日", field: "date", width: 105 }, stockNameColumn, changeColumn,
-        { title: "龙虎榜净买额", field: "net", money: true, width: 130 },
+        { title: "交易日", field: "date", width: 105 }, stockNameColumn,
+        ...(sina ? [{ title: "收盘价", field: "price" } as const, amountColumn] : [
+          changeColumn, { title: "龙虎榜净买额", field: "net", money: true, width: 130 } as const,
+        ]),
         kpl ? { title: "上榜次数", field: "count" } : { title: "上榜原因", field: "detail", width: 330 },
       ]} />}
     </FeedPanel>
@@ -410,6 +440,7 @@ export default function Hotspots() {
       <header className={styles.header}>
         <h1>市场热点</h1>
         <div className={styles.headerActions}>
+          <Link to={ROUTER_PATH.marketReview}>复盘</Link>
           <Link to={ROUTER_PATH.research}>题材查询</Link>
           <time dateTime={localDate()}>{displayMarketDate(localDate())} · 北京时间</time>
           <Button type="primary" icon={<ReloadOutlined aria-hidden />} loading={refreshing} onClick={() => void refresh()}>刷新数据</Button>
