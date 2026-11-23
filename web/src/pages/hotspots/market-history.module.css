@@ -44,6 +44,14 @@
   font-weight: 650;
   font-size: 14px;
 }
+.scroll svg .extremeLabel {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.extremePoint {
+  stroke: var(--ant-color-bg-container, Canvas);
+  stroke-width: 1.5;
+}
 .note {
   font-size: 0.8rem;
 }

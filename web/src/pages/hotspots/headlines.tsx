@@ -4,6 +4,7 @@ import { Button, Segmented } from "antd";
 import { useMarketFeed } from "./data";
 import { FeedPanel } from "./panels";
 import { useFlashRefresh } from "./flash-refresh";
+import { NewsList } from "./news-list";
 import { useRememberedMarketSource } from "./source";
 import styles from "./hotspots.module.css";
 
@@ -49,19 +50,7 @@ export function Headlines({ compact = false }: { compact?: boolean }) {
           !routineIndexQuote.test(row.name) && !routineEtfQuote.test(row.name),
         ).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "")).slice(0, compact ? 4 : 12);
         if (!selected.length) return <p className={styles.note}>近期暂无重点快讯。</p>;
-        return (
-          <ul className={styles.headlines}>
-            {selected.map(row => <li key={row.code}>
-              <time dateTime={row.date && (row.date.length > 10 ? `${row.date.replace(" ", "T")}+08:00` : row.date)}>
-                {row.date?.slice(5, 16)}
-              </time>
-              <div>
-                <a href={row.url} target="_blank" rel="noreferrer">{row.name}</a>
-                {row.detail && <div className={styles.muted}>{row.detail}</div>}
-              </div>
-            </li>)}
-          </ul>
-        );
+        return <NewsList rows={selected} />;
       }}
     </FeedPanel>
   );

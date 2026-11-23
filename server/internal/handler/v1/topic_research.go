@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"time"
 
 	"fullstack-app/server/internal/middleware"
 	"fullstack-app/server/internal/service"
@@ -76,5 +77,19 @@ func (h *TopicResearchHandler) Start(ctx context.Context, c *app.RequestContext)
 		return
 	}
 	data, err := h.research.Start(ctx, middleware.GetUserID(c), req)
+	researchResponse(ctx, c, data, err)
+}
+
+func (h *TopicResearchHandler) ReviewAdvice(ctx context.Context, c *app.RequestContext) {
+	var input struct{ Date, Batch string }
+	if c.BindJSON(&input) != nil || len(input.Batch) != 64 {
+		response.Fail(ctx, c, errcode.ErrBadRequest)
+		return
+	}
+	if _, err := time.Parse(time.DateOnly, input.Date); err != nil {
+		response.Fail(ctx, c, errcode.ErrBadRequest)
+		return
+	}
+	data, err := h.research.GenerateReviewAdvice(ctx, input.Date, input.Batch)
 	researchResponse(ctx, c, data, err)
 }

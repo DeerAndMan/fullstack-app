@@ -5,6 +5,7 @@ import {
 } from "antd";
 import { DownloadOutlined, ReloadOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { TextPreview } from "@/components/text-preview";
 
 import {
   exportRows, localDate, marketFeeds, moneyText, percentText, priceText, updateTime, useMarketFeed,
@@ -112,18 +113,21 @@ export function DataTable({
         columns={columns.map(({ title, field, money, percent, width, render }) => ({
           title, dataIndex: field, width, key: field ?? title,
           align: money || percent || field === "price" || field === "count" ? "right" : "left",
-          ellipsis: field === "detail",
           sorter: field && (money || percent || field === "price" || field === "count")
             ? (a, b) => Number(a[field] ?? 0) - Number(b[field] ?? 0)
             : undefined,
           render: (value: MarketRow[Field], row: MarketRow) => {
+            if (typeof value === "string" && value && (field === "name" || field === "detail")) {
+              const content = render ? render(row) : field === "name" && row.url
+                ? <a href={row.url} target="_blank" rel="noreferrer">{value}</a> : undefined;
+              return <TextPreview text={value} maxWidth={width ?? 220}>
+                {typeof content === "string" && content === value ? undefined : content}
+              </TextPreview>;
+            }
             if (render) return render(row);
             if (percent) return <Change value={Number.isFinite(value) ? Number(value) : undefined} />;
             if (money) return moneyText(typeof value === "number" ? value : undefined);
             if (field === "price") return priceText(typeof value === "number" ? value : undefined);
-            if (field === "name" && row.url) {
-              return <a href={row.url} target="_blank" rel="noreferrer">{value}</a>;
-            }
             return value || value === 0 ? value : "—";
           },
         }))}

@@ -1,0 +1,25 @@
+.preview {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview:has(:focus-visible) {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+  border-radius: 2px;
+}
+
+.tooltip {
+  max-height: min(50vh, 24rem);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.detail {
+  margin-top: 4px;
+  opacity: 0.8;
+}

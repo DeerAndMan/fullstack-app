@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Alert, Card, Collapse, Empty, Space, Table, Tag } from "antd";
+import { TextPreview } from "@/components/text-preview";
 import { updateTime } from "../hotspots/data";
 import styles from "./research.module.css";
 import type { ResearchCandidate, ResearchReport, ResearchRun, ResearchSource } from "./research-data";
@@ -16,7 +17,7 @@ const chainLabels = {
 
 function SourceLink({ source, compact = false }: { source: ResearchSource; compact?: boolean }) {
   if (/^\/hotspots\/review(?:\?[^#\\\s]*)?$/.test(source.url)) {
-    return <Link to={source.url}>{source.title}</Link>;
+    return <TextPreview text={source.title}><Link to={source.url}>{source.title}</Link></TextPreview>;
   }
   let valid = false;
   try {
@@ -26,7 +27,9 @@ function SourceLink({ source, compact = false }: { source: ResearchSource; compa
     // 记录中缺少可点击的源链接。
   }
   const text = compact ? `${source.provider} · ${source.title}` : source.title;
-  return valid ? <a href={source.url} target="_blank" rel="noreferrer">{text}</a> : <span>{text}</span>;
+  return <TextPreview text={text} detail={compact ? undefined : source.excerpt} maxWidth={compact ? 280 : undefined}>
+    {valid ? <a href={source.url} target="_blank" rel="noreferrer">{text}</a> : undefined}
+  </TextPreview>;
 }
 
 function OptimusResults({ report }: { report: ResearchReport }) {
@@ -151,8 +154,8 @@ export default function ResearchResult({ run }: { run: ResearchRun }) {
         <ul className={styles.researchSources}>
           {report.sources.map(source => <li key={source.id}>
             <SourceLink source={source} />
-            <div className={styles.muted}>{source.id} · {source.provider}{source.date ? ` · ${source.date.slice(0, 10)}` : ""}</div>
-            {source.excerpt && <p className={styles.note}>{source.excerpt}</p>}
+            <TextPreview className={`${styles.researchSourceMeta} ${styles.muted}`}
+              text={`${source.id} · ${source.provider}${source.date ? ` · ${source.date.slice(0, 10)}` : ""}`} />
           </li>)}
         </ul>
       </Card>

@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Alert, Button, Form, Input, Skeleton, theme } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth";
+import { TextPreview } from "@/components/text-preview";
 import { withTokenColors } from "../hotspots/panels";
 import { listResearchSkills, saveResearchSkill, researchError } from "./research-data";
 import type { ResearchSkill } from "./research-data";
@@ -69,17 +70,15 @@ export default function ResearchSkills() {
           </Button>
         </Form>
       )}
-      {skills.data?.map(skill => (
-        <article className={styles.skillItem} key={skill.id}>
-          <header>
-            <h3>{skill.name}</h3>
-            <Button size="small" disabled={save.isPending} onClick={() => edit(skill)}>
-              编辑
-            </Button>
-          </header>
-          <p>{skill.instructions}</p>
-        </article>
-      ))}
+      <div className={styles.skillList}>
+        {skills.data?.map(skill => (
+          <article className={styles.skillItem} key={skill.id}>
+            <h3><TextPreview text={skill.name} /></h3>
+            <TextPreview className={styles.skillDescription} text={skill.instructions} />
+            <Button size="small" disabled={save.isPending} onClick={() => edit(skill)}>编辑</Button>
+          </article>
+        ))}
+      </div>
     </main>
   );
 }

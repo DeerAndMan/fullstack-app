@@ -32,7 +32,7 @@ func (r *MarketReviewRepository) StudyCoverage(ctx context.Context) ([]ReviewCov
 }
 
 func (r *MarketReviewRepository) SaveStudy(ctx context.Context, date, batch, kind string, payload json.RawMessage) error {
-	if kind != "patterns" && kind != "sectors" && kind != "style" {
+	if kind != "patterns" && kind != "sectors" && kind != "style" && kind != model.ReviewAdviceKind {
 		return fmt.Errorf("unknown study kind %s", kind)
 	}
 	if len(payload) == 0 || !json.Valid(payload) || payload[0] != '{' {
@@ -51,7 +51,11 @@ func (r *MarketReviewRepository) SaveStudy(ctx context.Context, date, batch, kin
 		return err
 	}
 	row := model.MarketReviewStudy{DayID: day.ID, Kind: kind, Data: buf.Bytes()}
-	return r.db.WithContext(ctx).Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "day_id"}, {Name: "kind"}}, DoUpdates: clause.AssignmentColumns([]string{"data"})}).Create(&row).Error
+	conflict := clause.OnConflict{Columns: []clause.Column{{Name: "day_id"}, {Name: "kind"}}, DoUpdates: clause.AssignmentColumns([]string{"data"})}
+	if kind == model.ReviewAdviceKind {
+		conflict = clause.OnConflict{DoNothing: true}
+	}
+	return r.db.WithContext(ctx).Clauses(conflict).Create(&row).Error
 }
 
 func (r *MarketReviewRepository) Study(ctx context.Context, id uint64, kind string) (json.RawMessage, error) {

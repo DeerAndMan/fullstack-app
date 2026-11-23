@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"fullstack-app/server/internal/model"
 	"regexp"
 	"slices"
 	"strconv"
@@ -32,6 +34,9 @@ func useMarketReview(question string, skills []ResearchSkill) bool {
 		return false
 	}
 	if studyKind(question) != "" || asksReviewDates(question) || reviewDatePattern.MatchString(question) || reviewCompactDate.MatchString(question) || reviewMonthDay.MatchString(question) || reviewStockCode.MatchString(question) {
+		return true
+	}
+	if len(skills) == 1 && (strings.Contains(question, "建议") || strings.Contains(question, "买入")) {
 		return true
 	}
 	for _, term := range []string{"复盘", "上涨家数", "新高", "沪深300", "沪深 300", "均线", "ma50", "50日", "50 日", "名单", "分母", "占比", "背离", "交易日"} {
@@ -118,6 +123,17 @@ func (s *TopicResearchService) reviewEvidence(ctx context.Context, question stri
 	if prev, e := s.Reviews.Day(ctx, day.Previous, ""); e == nil && prev.Rule == day.Rule {
 		delta := day.Highs - prev.Highs
 		r.Notes = append(r.Notes, fmt.Sprintf("较 %s，一年新高家数变化 %+d。", prev.Date, delta))
+	}
+	if strings.Contains(question, "建议") || strings.Contains(question, "买入") {
+		raw, e := s.Reviews.Study(ctx, day.ID, model.ReviewAdviceKind)
+		var advice model.ReviewAdvice
+		if e == nil && json.Unmarshal(raw, &advice) == nil {
+			r.Conclusion += " 已归档 AI 研判：" + advice.Market + " 买入条件：" + advice.Buy
+		} else if errors.Is(e, gorm.ErrRecordNotFound) {
+			r.Notes = append(r.Notes, "当日尚无已归档 AI 建议。")
+		} else {
+			r.Notes = append(r.Notes, "读取已归档 AI 建议失败。")
+		}
 	}
 	if studyKind(question) != "" {
 		s.studyReply(ctx, day, question, &r)

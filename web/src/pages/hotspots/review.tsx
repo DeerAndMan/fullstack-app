@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Button, Card, Drawer, Empty, Input, Pagination, Select, Skeleton, Table } from "antd";
-import { Link, useSearchParams } from "react-router-dom";
+import { Alert, Button, Card, Drawer, Empty, Input, Pagination, Select, Skeleton, Table, Tabs } from "antd";
+import { useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { RequestGet } from "@/api/request-schema";
-import ROUTER_PATH from "@/router/section/router-path";
 import styles from "./review.module.css";
-import ReviewStudies from "./review-studies";
+import ReviewUpdate from "./review-update";
+import ReviewTimeline from "./review-timeline";
+import { reviewGuidance } from "./review-guidance";
+import { PatternCard, SectorCard, StyleCard } from "./review-studies";
 
 const daySchema = z.object({
   date: z.string(),
@@ -136,26 +138,51 @@ function Members({ day, metric, close }: { day: Day; metric: Metric; close: () =
   );
 }
 
-function Daily({ day, delta }: { day: Day; delta: number | null }) {
+function Daily({ day, delta, selectDate }: { day: Day; delta: number | null; selectDate: (date: string) => void }) {
   const [metric, setMetric] = useState<Metric>();
-  const ratio = day.eligible ? ((day.above * 100) / day.eligible).toFixed(2) + "%" : "—";
+  const [params, setParams] = useSearchParams();
+  const requested = params.get("section");
+  const sections = ["history", "industry", "style", "patterns"];
+  const hasPatternFilter = ["stage", "pattern", "search", "big", "near", "width", "doji", "shrink"].some(key => params.has(key));
+  const section = requested && sections.includes(requested) ? requested : hasPatternFilter ? "patterns" : "history";
+  function selectSection(key: string) {
+    const next = new URLSearchParams(params);
+    next.set("section", key);
+    setParams(next, {replace: true});
+  }
+  const {focus, others, change, ratio, gaps} = reviewGuidance(day, delta);
+  const focusMetric = focus.metric;
   const figures = [
     { title: "上涨家数", value: day.up + " 家", effect: day.traded + " 家有当日成交日线", metric: "up" },
     {
       title: "一年新高家数",
       value: day.highs + " 家",
-      effect: day.highEligible + " 家满足 250 根窗口",
+      effect: change,
       metric: "high",
     },
     {
       title: "沪深 300 的 50 日占比",
-      value: ratio,
+      value: ratio === null ? "—" : ratio.toFixed(2) + "%",
       effect: day.above + " 家高于均线 / " + day.eligible + " 家有效成份",
       metric: "csi",
     },
   ] as const;
   return (
     <>
+      <section className={styles.brief} aria-label="当日复盘重点">
+        <div className={styles.briefHeading}>{day.date} · 收盘观察</div>
+        <h2>{focus.title}</h2>
+        <p>{focus.reason}</p>
+        <div className={styles.nextStep}><strong>复盘建议</strong><span>{focus.next}</span>
+          {focusMetric ? <button onClick={() => setMetric(focusMetric)}>{labels[focusMetric]} →</button>
+            : <button onClick={() => selectSection("industry")}>查看行业表 →</button>}
+        </div>
+        {others.map(rule => <div key={rule.title} className={styles.secondary}>
+          <strong>{rule.title}</strong>　{rule.reason}{rule.next}
+          <button onClick={() => setMetric(rule.metric)}>查看名单 →</button>
+        </div>)}
+        {gaps && <p>数据缺口 · {gaps}</p>}
+      </section>
       <div className={styles.figures}>
         {figures.map(f => (
           <Card key={f.metric}>
@@ -168,7 +195,21 @@ function Daily({ day, delta }: { day: Day; delta: number | null }) {
           </Card>
         ))}
       </div>
-      <Card title="统计口径与核对">
+      <details className={styles.method}>
+        <summary>按原文判断操作 · 从观望到买入或退出</summary>
+        <p><strong>空仓时先看环境。</strong>一年新高不足 20 家，作者通常暂停强势股交易；重新超过 20 家，恢复找机会。再对照近期新高指数与平均股价的强弱，以及近期新高指数相对 EMA5、EMA13 的位置。</p>
+        <p><strong>有方向才选股。</strong>跟踪几天里反复进入容量、强度前排的行业。优先复核其中成交活跃、前段涨幅突出、在题材中有辨识度的股票。</p>
+        <p><strong>候选股等分歧。</strong>作者关注强股上涨途中的十字星。结合前期大阳、横盘或回踩的位置，确认支撑和板块呼应，并能事先写出失效条件，才进入买入评估。</p>
+        <p><strong>持仓按计划处理。</strong>作者在板块与个股重新一致走强时考虑兑现；触及预设止损时退出。文章没有为所有个股给出统一卖价。</p>
+        <p>页面的“当日触发”采用项目筛选口径，即下一交易日最高价突破候选日最高价。题材逻辑、承接质量和个人风险预算仍需自行核对。</p>
+      </details>
+      <Tabs activeKey={section} onChange={selectSection} items={[
+        {key:"history",label:"逐日对照",children:<ReviewTimeline date={day.date} select={selectDate}/>},
+        {key:"industry",label:"行业容量与强度",children:<SectorCard day={day}/>},
+        {key:"style",label:"风格指数",children:<StyleCard day={day}/>},
+        {key:"patterns",label:"个股形态",children:<PatternCard day={day}/>},
+      ]} />
+      <details className={styles.method}><summary>统计口径、排除明细与来源</summary>
         <p>
           沪深 A 股（含 ST）。当日股票池 {day.total} 家，{day.total - day.traded}{" "}
           家两源均无当日成交日线。上涨按收盘日涨跌幅大于零计。
@@ -190,8 +231,7 @@ function Daily({ day, delta }: { day: Day; delta: number | null }) {
           <Button onClick={() => setMetric("all")}>全部样本</Button>
           <Button onClick={() => setMetric("excluded")}>查看排除明细</Button>
         </div>
-      </Card>
-      <ReviewStudies day={day} />
+
       <footer>
         当日行情{" "}
         <a href={day.source} target="_blank" rel="noreferrer">
@@ -225,6 +265,7 @@ function Daily({ day, delta }: { day: Day; delta: number | null }) {
         <br />
         规则 {day.rule} · 批次 {day.batch.slice(0, 12)} · 预热起点 {day.windowStart}
       </footer>
+      </details>
       {metric && <Members day={day} metric={metric} close={() => setMetric(undefined)} />}
     </>
   );
@@ -238,6 +279,11 @@ export default function MarketReview() {
       (await RequestGet("/api/v1/review/dates", { schema: z.array(z.string()), signal })).data,
   });
   const date = params.get("date") ?? dates.data?.[0];
+  function selectDate(value: string) {
+    const next = new URLSearchParams(params);
+    next.set("date", value);
+    setParams(next);
+  }
   const daily = useQuery({
     queryKey: ["review-day", date],
     enabled: !!date,
@@ -260,13 +306,10 @@ export default function MarketReview() {
             placeholder="选择归档日"
             loading={dates.isPending}
             options={dates.data?.map(value => ({ label: value, value }))}
-            onChange={value => {
-              const next = new URLSearchParams(params);
-              next.set("date", value);
-              setParams(next);
-            }}
+            onChange={selectDate}
           />
         </label>
+        <ReviewUpdate selectDate={selectDate}/>
       </header>
       {dates.isError || daily.isError ? (
         <Alert
@@ -286,9 +329,9 @@ export default function MarketReview() {
       ) : dates.isPending || (date && daily.isPending) ? (
         <Skeleton active />
       ) : daily.data ? (
-        <Daily key={daily.data.day.batch} day={daily.data.day} delta={daily.data.highDelta} />
+        <Daily key={daily.data.day.batch} day={daily.data.day} delta={daily.data.highDelta} selectDate={selectDate} />
       ) : (
-        <Empty description={date ? date + " 暂无已发布复盘" : "暂无已发布复盘"} />
+        <><Empty description={date ? date + " 暂无已发布复盘" : "暂无已发布复盘"} />{date && <ReviewTimeline date={date} select={selectDate} />}</>
       )}
     </main>
   );

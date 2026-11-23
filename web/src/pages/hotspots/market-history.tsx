@@ -26,6 +26,20 @@ const scoreSeries = [
   { name: "A股每日复盘", color: "#397c94" },
   { name: "知市综合情绪（第一版）", color: "#835eaa" },
 ];
+
+function sentimentExtremes(rows: MarketRow[]) {
+  type Point = { index: number; score: number; date?: string };
+  let highest: Point | undefined;
+  let lowest: Point | undefined;
+  rows.forEach(({ sentiment, date }, index) => {
+    if (sentiment == null) return;
+    const point = { index, score: sentiment, date };
+    if (!highest || sentiment >= highest.score) highest = point;
+    if (!lowest || sentiment <= lowest.score) lowest = point;
+  });
+  return { highest, lowest };
+}
+
 function HistoryTrends({ rows, amountOnly }: { rows: MarketRow[]; amountOnly: boolean }) {
   const [focus, setFocus] = useState("");
   const selected = rows.find(r => r.date === focus) ?? rows[rows.length - 1];
@@ -54,6 +68,14 @@ function HistoryTrends({ rows, amountOnly }: { rows: MarketRow[]; amountOnly: bo
   }
   const interval = Math.max(1, Math.ceil(rows.length / 7));
   const amountLabel = amountOnly ? "上证综指与深证综指成交额合计" : "沪深成交额";
+  const { highest, lowest } = sentimentExtremes(amountOnly ? [] : rows);
+  const spansYears = rows[0].date?.slice(0, 4) !== rows.at(-1)?.date?.slice(0, 4);
+  const chartLabel = amountOnly ? amountLabel : [
+    "历史市场情绪、沪深成交额与上涨下跌家数。",
+    highest && `区间最高 ${highest.score} 分（${displayMarketDate(highest.date)}）。`,
+    lowest && `区间最低 ${lowest.score} 分（${displayMarketDate(lowest.date)}）。`,
+    "逐日数值见下方明细。",
+  ].filter(Boolean).join("");
   return (
     <>
       <div className={styles.readout}>
@@ -91,12 +113,17 @@ function HistoryTrends({ rows, amountOnly }: { rows: MarketRow[]; amountOnly: bo
         </>}
       </div>
       <div className={styles.scroll}>
-        <svg viewBox={amountOnly ? "0 163 980 175" : "0 0 980 385"} role="img"
-          aria-label={amountOnly ? amountLabel : "历史市场情绪、沪深成交额与上涨下跌家数。逐日数值见下方明细。"}>
+        <svg viewBox={amountOnly ? "0 163 980 175" : "0 0 980 385"} role="img" aria-label={chartLabel}>
           {!amountOnly && <>
             <text x={left} y={15} className={styles.title}>
               市场情绪（分）
             </text>
+            {highest && <text x={right - 188} y={15} textAnchor="end" className={styles.extremeLabel} style={{ color: upColor }}>
+              最高 {highest.score} · {displayMarketDate(highest.date, spansYears)}
+            </text>}
+            {lowest && <text x={right} y={15} textAnchor="end" className={styles.extremeLabel} style={{ color: downColor }}>
+              最低 {lowest.score} · {displayMarketDate(lowest.date, spansYears)}
+            </text>}
             {bands.map((b, i) => (
               <g key={b.name}>
                 <rect x={left} y={116 - i * 30} width={width} height={30} fill={b.color} fillOpacity=".10" />
@@ -143,6 +170,9 @@ function HistoryTrends({ rows, amountOnly }: { rows: MarketRow[]; amountOnly: bo
             const hi = ((r.advancers ?? 0) / maxCount) * 58,
               lo = ((r.decliners ?? 0) / maxCount) * 58;
             const w = Math.min(19, slot * 0.47);
+            const isHighest = highest?.index === i;
+            const isLowest = lowest?.index === i;
+            const extremeColor = isHighest && isLowest ? scoreColor : isHighest ? upColor : isLowest ? downColor : undefined;
             return (
               <g key={r.code} onPointerEnter={() => setFocus(r.date!)} onClick={() => setFocus(r.date!)}>
                 {selected === r && (
@@ -156,7 +186,11 @@ function HistoryTrends({ rows, amountOnly }: { rows: MarketRow[]; amountOnly: bo
                     strokeDasharray="3 4"
                   />
                 )}
-                {r.sentiment != null && <circle cx={x(i)} cy={scoreY(r)} r={selected === r ? 4.5 : 3} fill={scoreSeries.find(series => series.name === r.detail)?.color ?? scoreColor} />}
+                {!amountOnly && r.sentiment != null && <circle
+                  cx={x(i)} cy={scoreY(r)} r={extremeColor ? 6 : selected === r ? 4.5 : 3}
+                  fill={extremeColor ?? (scoreSeries.find(series => series.name === r.detail)?.color ?? scoreColor)}
+                  className={extremeColor ? styles.extremePoint : undefined}
+                />}
                 {r.amount != null && <circle cx={x(i)} cy={volumeY(r)} r="3" fill={volumeColor} />}
                 <rect x={x(i) - w / 2} y={295 - hi} width={w} height={hi} fill={upColor} />
                 <rect x={x(i) - w / 2} y="295" width={w} height={lo} fill={downColor} />
@@ -169,6 +203,8 @@ function HistoryTrends({ rows, amountOnly }: { rows: MarketRow[]; amountOnly: bo
                   <title>
                     {displayMarketDate(r.date)} · 成交 {money(r)} 亿
                     {!amountOnly && ` · 情绪 ${r.sentiment ?? "—"} · 涨 ${r.advancers ?? "—"} / 跌 ${r.decliners ?? "—"}`}
+                    {isHighest && " · 区间最高"}
+                    {isLowest && " · 区间最低"}
                   </title>
                 </rect>
               </g>
@@ -188,6 +224,7 @@ function HistoryTrends({ rows, amountOnly }: { rows: MarketRow[]; amountOnly: bo
           主源为开盘啦。情绪分采用开盘啦公布的历史情绪指标，沪深成交额和涨跌家数取同日收盘统计。
           同花顺上证指数日线用于核对交易日。主源缺项时优先使用已保存的开盘啦收盘数据，其次使用同日的备用来源。
           知市和 A股每日复盘各自计算情绪分，按来源分段绘制。四档分界为 25、50、75 分。
+          最高和最低取当前区间有情绪分的归档日。同分时标记最近一天。
 
         </p>}
         <DataTable

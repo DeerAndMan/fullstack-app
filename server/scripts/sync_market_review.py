@@ -95,7 +95,7 @@ def release_info():
     tag = json.loads(fetch(LATEST))["tag_name"]
     date.fromisoformat(tag)
     manifest = json.loads(fetch(f"{RELEASES}/{tag}/qlib_bin.manifest.json"))
-    if (manifest["release_tag"] != tag or manifest["target_trade_date"] != tag
+    if (manifest["release_tag"] != tag or date.fromisoformat(manifest["target_trade_date"]) > date.fromisoformat(tag)
             or not re.fullmatch(r"[0-9a-v]{32}", manifest["dolt_commit"])):
         raise ValueError("unexpected release manifest")
     return manifest
@@ -237,7 +237,7 @@ def sync(work, start, end, importer):
     else:
         first = start
     manifest = release_info()
-    release = manifest["release_tag"]
+    release = manifest["target_trade_date"]
     if end.isoformat() > manifest["future_end_date"]:
         raise ValueError("待核对日期超出来源日历覆盖范围")
     # Keep only a small calendar for holiday and already-published runs.
@@ -270,22 +270,69 @@ def sync(work, start, end, importer):
     from review_studies import publish
     rows = json.loads(subprocess.check_output([str(importer), "-studies"], cwd=SERVER)) or []
     needed = [r for r in rows if first.isoformat() <= r["date"] <= end.isoformat()
-              and set(r["kinds"].split(",")) != {"style","patterns","sectors"}]
+              and not {"style","patterns","sectors"}.issubset(r["kinds"].split(","))]
     if needed:
         if qlib is None:
             qlib = extract_calendar_and_volumes(work, manifest)
             calendar, _ = read_sessions(qlib, release)
         publish(work, importer, qlib, calendar, manifest, needed)
+    # Retry the most recent closed session even when its daily archive already exists.
+    latest = max((d for d in after if d <= end.isoformat()), default=None)
+    advice_dates = [r["date"] for r in rows if "advice-v3" not in r["kinds"].split(",")
+                    and (first.isoformat() <= r["date"] <= end.isoformat() or r["date"] == latest)]
+    if advice_dates:
+        subprocess.run([str(importer), "-advice", *advice_dates], cwd=SERVER, check=True)
 
+
+
+class QuotesNotPublished(ValueError):
+    """The selected day is newer than the vendor's published trading data."""
+
+
+def refresh_day(work, day, importer):
+    """Build all inputs before publishing a selected day and its new AI advice."""
+    print("REVIEW 核对交易日与上游收盘行情", flush=True)
+    manifest = release_info()
+    if day > manifest["target_trade_date"]:
+        raise QuotesNotPublished(f"行情源最新交易日为 {manifest['target_trade_date']}，{day} 的收盘行情尚未发布")
+    qlib = extract_calendar_and_volumes(work, manifest)
+    calendar, _ = read_sessions(qlib, manifest["target_trade_date"])
+    if day not in calendar:
+        raise ValueError(f"{day} 不在数据源已发布的交易日历中")
+    print("REVIEW 重算市场指标与成份名单", flush=True)
+    paths = list(calculate(work, qlib, calendar, [day], manifest))
+    if len(paths) != 1:
+        raise ValueError(f"{day} 缺少完整行情归档")
+    raw = gzip.decompress(paths[0].read_bytes())
+    daily = json.loads(raw)
+    if daily["date"] != day:
+        raise ValueError("行情归档日期不匹配")
+    # Previous-day MA50 coverage is needed for the index divergence check.
+    coverage = json.loads(subprocess.check_output([str(importer), "-studies"], cwd=SERVER)) or []
+    previous = next((r for r in coverage if r["date"] == daily["previous"]), {})
+    values = [m["above"] for m in daily["rows"] if m.get("above") is not None]
+    row = dict(date=day, batch=hashlib.sha256(raw).hexdigest(), kinds="", above=sum(values),
+               eligible=len(values), prevEligible=previous.get("eligible"), prevAbove=previous.get("above"))
+    print("REVIEW 重算风格、行业和个股形态", flush=True)
+    from review_studies import publish
+    publish(work, None, qlib, calendar, manifest, [row])
+    print("REVIEW 生成当日 AI 复盘与买入评估", flush=True)
+    subprocess.run([str(importer), "-refresh", str(paths[0])], cwd=SERVER, check=True)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start", type=date.fromisoformat)
     parser.add_argument("--end", type=date.fromisoformat)
+    parser.add_argument("--refresh-date", type=date.fromisoformat)
     args = parser.parse_args()
-    cutoff = closed_through(datetime.now(ZoneInfo("Asia/Shanghai")))
-    end = args.end or cutoff
+    if args.refresh_date and (args.start or args.end):
+        parser.error("--refresh-date 仅接受单个交易日")
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    if args.refresh_date and now.hour < 15:
+        parser.error("手动更新在北京时间 15:00 起开放")
+    cutoff = closed_through(now)
+    end = args.refresh_date or args.end or cutoff
     if end > cutoff or (args.start and args.start > end):
         parser.error("请选择已收盘日期范围")
     state = SERVER.parent / "tmp"
@@ -296,8 +343,22 @@ def main():
         importer = work / "import-review"
         env = os.environ.copy()
         env.setdefault("GOCACHE", str(state / "go-build"))
-        subprocess.run(["go", "build", "-o", str(importer), "./cmd/import-review"], cwd=SERVER, env=env, check=True)
-        sync(work, args.start, end, importer)
+        if installed := os.environ.get("REVIEW_IMPORTER"):
+            importer = Path(installed).resolve()
+        else:
+            subprocess.run(["go", "build", "-o", str(importer), "./cmd/import-review"], cwd=SERVER, env=env, check=True)
+        if args.refresh_date:
+            try:
+                refresh_day(work, end.isoformat(), importer)
+            except QuotesNotPublished as error:
+                print("REVIEW " + str(error), flush=True)
+                raise SystemExit(75)  # Manual refresh: source data temporarily unavailable.
+            except ValueError as error:
+                if str(error).startswith(end.isoformat()+" 不在数据源"):
+                    print("REVIEW " + str(error), flush=True)
+                raise
+        else:
+            sync(work, args.start, end, importer)
 
 
 if __name__ == "__main__":

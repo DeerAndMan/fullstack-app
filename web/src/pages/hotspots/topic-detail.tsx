@@ -3,6 +3,7 @@ import { Alert, Button, Divider, Drawer, Empty, Segmented, Skeleton, Tag, theme 
 import dayjs from "dayjs";
 
 import { ConceptReason } from "./concept-reason";
+import { NewsList } from "./news-list";
 import { isStockSymbol, localDate, marketFeeds, marketSession, moneyText, updateTime, useMarketFeed } from "./data";
 import { amountColumn, Change, changeColumn, DataTable, nameColumn, withTokenColors } from "./panels";
 import { StockLink } from "./stock-link";
@@ -22,17 +23,6 @@ function Retry({ queries, message }: { queries: MarketQuery[]; message: string }
     action={<Button size="small" loading={queries.some(query => query.isFetching)}
       onClick={() => queries.forEach(query => void query.refetch())}>重试</Button>}
   />;
-}
-
-function NewsList({ rows }: { rows: MarketRow[] }) {
-  return (
-    <ul className={styles.headlines}>
-      {rows.map(row => <li key={row.code}>
-        <time dateTime={row.date?.replace(" ", "T")}>{row.date?.slice(0, 16)}</time>
-        <a href={row.url} target="_blank" rel="noreferrer">{row.name}</a>
-      </li>)}
-    </ul>
-  );
 }
 
 function memberStatus(row: MarketRow) {
@@ -119,7 +109,7 @@ function TopicContent({ concept, stale }: { concept: MarketRow; stale: boolean }
             title: "关联原因", render: row => (
               <div className={styles.conceptReason}>
                 {isStockSymbol(row.symbol)
-                  ? <ConceptReason concept={concept.code} symbol={row.symbol} missingMessage={memberReasonMissing} />
+                  ? <ConceptReason concept={concept.code} symbol={row.symbol} missingMessage={memberReasonMissing} compact />
                   : <span className={styles.muted}>{memberReasonMissing}</span>}
               </div>
             ),
@@ -172,10 +162,10 @@ function TopicContent({ concept, stale }: { concept: MarketRow; stale: boolean }
       {failed(news) && <Retry queries={[news]} message={news.data?.message || "消息检索暂不可用。"} />}
       {!failed(news) && news.data?.message && <p className={styles.note}>{news.data.message}</p>}
       {news.data?.status === "stale" && <p className={styles.note}>以下为最近一次可用的检索结果。</p>}
-      {recentNews.length > 0 && <NewsList rows={recentNews.slice(0, 6)} />}
+      {recentNews.length > 0 && <NewsList rows={recentNews.slice(0, 6)} fullDate />}
       {olderNews.length > 0 && <>
         <h4>更早的背景报道</h4>
-        <NewsList rows={olderNews.slice(0, 4)} />
+        <NewsList rows={olderNews.slice(0, 4)} fullDate />
       </>}
       {news.data?.status === "ready" && !news.data.rows.length && <p className={styles.note}>没有找到匹配的消息原文。</p>}
       <a className={styles.source} href={news.data?.sourceUrl ?? `${marketFeeds["concept-news"]}?${new URLSearchParams({ q: concept.name })}`}

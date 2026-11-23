@@ -1,13 +1,18 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 RUN apk add --no-cache git
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /server cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /import-review ./cmd/import-review
 
-FROM scratch
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+FROM alpine:3.22
+RUN apk add --no-cache ca-certificates curl python3 tzdata
+WORKDIR /app/server
+COPY scripts/*.py ./scripts/
+COPY --from=builder /import-review /usr/local/bin/import-review
+ENV REVIEW_IMPORTER=/usr/local/bin/import-review
 COPY --from=builder /server /server
 COPY config/config.yaml /config/config.yaml
 EXPOSE 8080

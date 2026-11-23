@@ -143,20 +143,32 @@
 }
 
 .headlines li {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
-  padding: 9px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--market-border);
 }
 
-.headlines li + li,
 .focusList li + li {
   border-top: 1px solid var(--market-border);
 }
 
 .headlines time {
+  flex: none;
   font-size: 0.8125rem;
   color: var(--market-secondary);
+}
+
+.headlineTitle {
+  flex: 1 1 0;
+}
+
+.headlineSource {
+  flex: 0 1 auto;
+  max-width: 24%;
+  text-align: end;
 }
 
 .refreshControls,
@@ -272,13 +284,6 @@
   margin-top: 6px;
 }
 
-@media (max-width: 550px) {
-  .topicSection .headlines li {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
-  }
-}
-
 .tierGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 265px), 1fr));
@@ -333,6 +338,30 @@
   overflow-wrap: anywhere;
   line-height: 1.55;
   font-size: 0.8125rem;
+}
+
+.reasonCompact {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reasonCompact .reasonTag {
+  flex-shrink: 0;
+  margin-inline-end: 0;
+}
+
+.reasonText {
+  flex: 1 1 0;
+}
+
+.reasonCompact .reasonSources {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 32%;
+  flex-wrap: nowrap;
+  margin: 0;
 }
 
 .reasonTag {

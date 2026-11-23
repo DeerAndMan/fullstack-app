@@ -8,14 +8,18 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"gorm.io/gorm"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"fullstack-app/server/internal/config"
 	"fullstack-app/server/internal/database"
 	"fullstack-app/server/internal/model"
 	"fullstack-app/server/internal/repository"
+	"fullstack-app/server/internal/service"
 )
 
 type artifact struct {
@@ -111,7 +115,9 @@ func importDay(repo *repository.MarketReviewRepository, path string) error {
 	return nil
 }
 
-func importStudy(repo *repository.MarketReviewRepository, path string) error {
+type studyIdentity struct{ Date, Batch, Kind string }
+
+func importStudy(repo *repository.MarketReviewRepository, path string, expected *studyIdentity) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -129,6 +135,9 @@ func importStudy(repo *repository.MarketReviewRepository, path string) error {
 	if err = json.NewDecoder(z).Decode(&a); err != nil {
 		return err
 	}
+	if expected != nil && (a.Date != expected.Date || a.Batch != expected.Batch || a.Kind != expected.Kind) {
+		return fmt.Errorf("study does not match refreshed daily batch")
+	}
 	if len(a.Batch) != 64 {
 		return fmt.Errorf("missing batch")
 	}
@@ -136,9 +145,15 @@ func importStudy(repo *repository.MarketReviewRepository, path string) error {
 }
 
 func run() error {
-	path := flag.String("config", "config/config.yaml", "project config")
+	defaultConfig := os.Getenv("REVIEW_IMPORT_CONFIG")
+	if defaultConfig == "" {
+		defaultConfig = "config/config.yaml"
+	}
+	path := flag.String("config", defaultConfig, "project config")
+	refresh := flag.Bool("refresh", false, "atomically publish one prepared daily archive, its studies and fresh AI advice")
 	list := flag.Bool("dates", false, "list archived dates as JSON")
 	coverage := flag.Bool("studies", false, "list study coverage by current review batch")
+	advice := flag.Bool("advice", false, "generate or reuse archived AI advice for the supplied trading dates")
 	study := flag.Bool("study", false, "import gzipped review study")
 	flag.Parse()
 	if !*list && !*coverage && flag.NArg() == 0 {
@@ -153,6 +168,57 @@ func run() error {
 		return err
 	}
 	repo := repository.NewMarketReviewRepository(db)
+	if *refresh {
+		if flag.NArg() != 1 {
+			return fmt.Errorf("expected a single daily artifact")
+		}
+		archive := flag.Arg(0)
+		date := strings.TrimSuffix(filepath.Base(archive), ".json.gz")
+		if _, err = time.Parse(time.DateOnly, date); err != nil {
+			return err
+		}
+		return db.Transaction(func(tx *gorm.DB) error {
+			reviews := repository.NewMarketReviewRepository(tx)
+			if err := importDay(reviews, archive); err != nil {
+				return err
+			}
+			day, err := reviews.Day(context.Background(), date, "")
+			if err != nil {
+				return err
+			}
+			for _, kind := range []string{"style", "sectors", "patterns"} {
+				file := filepath.Join(filepath.Dir(archive), date+"-"+kind+".json.gz")
+				if err := importStudy(reviews, file, &studyIdentity{date, day.Batch, kind}); err != nil {
+					return err
+				}
+			}
+			if err := tx.Where("day_id=? AND kind=?", day.ID, model.ReviewAdviceKind).Delete(&model.MarketReviewStudy{}).Error; err != nil {
+				return err
+			}
+			svc := service.NewTopicResearchService(nil, nil, cfg.Server.Mode == "debug")
+			svc.Reviews = reviews
+			_, err = svc.GenerateReviewAdvice(context.Background(), date, day.Batch)
+			return err
+		})
+	}
+	if *advice {
+		svc := service.NewTopicResearchService(nil, nil, cfg.Server.Mode == "debug")
+		svc.Reviews = repo
+		for _, date := range flag.Args() {
+			if _, err := time.Parse(time.DateOnly, date); err != nil {
+				return err
+			}
+			day, err := repo.Day(context.Background(), date, "")
+			if err != nil {
+				return err
+			}
+			if _, err = svc.GenerateReviewAdvice(context.Background(), date, day.Batch); err != nil {
+				return fmt.Errorf("%s AI review: %w", date, err)
+			}
+			fmt.Println(date, "AI 建议已归档")
+		}
+		return nil
+	}
 	if *list {
 		if !db.Migrator().HasTable(&model.MarketReviewDay{}) {
 			return json.NewEncoder(os.Stdout).Encode([]string{})
@@ -178,7 +244,7 @@ func run() error {
 			return json.NewEncoder(os.Stdout).Encode(rows)
 		}
 		for _, path := range flag.Args() {
-			if err := importStudy(repo, path); err != nil {
+			if err := importStudy(repo, path, nil); err != nil {
 				return fmt.Errorf("%s: %w", path, err)
 			}
 		}

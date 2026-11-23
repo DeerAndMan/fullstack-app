@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"fullstack-app/server/internal/config"
 	"fullstack-app/server/internal/database"
@@ -84,7 +85,11 @@ func main() {
 	uploader := upload.NewUploader(cfg.Upload.Path, cfg.Upload.MaxSize, cfg.Upload.AllowExts)
 
 	// 组装依赖
-	deps := initHandlers(db, rdb, jwtManager, uploader, cfg)
+	configFile, err := filepath.Abs(*configPath)
+	if err != nil {
+		logger.Fatal("resolve config path", zap.Error(err))
+	}
+	deps := initHandlers(db, rdb, jwtManager, uploader, cfg, configFile)
 
 	// Hertz server
 	h := server.Default(

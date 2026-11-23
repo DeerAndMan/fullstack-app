@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Card, Empty, Input, InputNumber, Select, Space, Spin, Table } from "antd";
 import { z } from "zod";
+import styles from "./review.module.css";
 import { RequestGet, RequestPut } from "@/api/request-schema";
 
 const styleData = z.object({
@@ -12,7 +13,7 @@ const styleData = z.object({
 });
 const boards = z.object({
   base: z.string(), unclassified: z.array(z.string()),
-  rows: z.array(z.object({ code: z.string(), name: z.string(), eligible: z.number(), members: z.number(), hits: z.array(z.string()), strength: z.number().nullable(), strengthMethod: z.string().optional(), start: z.number().nullable(), close: z.number().nullable() })),
+  rows: z.array(z.object({ code: z.string(), name: z.string(), eligible: z.number(), members: z.number(), hits: z.array(z.string()), strength: z.number().nullable(), strengthMethod: z.string().optional(), change:z.number().nullish(), amount:z.number().nullish(), start: z.number().nullable(), close: z.number().nullable() })),
 });
 const patterns = z.object({
   total: z.number(), rows: z.array(z.object({ symbol: z.string(), name: z.string(), kind: z.string(), anchor: z.string(), days: z.number(), big: z.number(), near: z.number(), width: z.number(), doji: z.number(), shrink: z.number(), close: z.number(), high: z.number(), open: z.number(), low: z.number(), ema5: z.number(), ema13: z.number(), amount: z.number(), signalDate: z.string(), triggerDate: z.string().optional() })),
@@ -29,33 +30,52 @@ const decimal = (v: number | null, digits = 2) => v == null ? "—" : v.toFixed(
 function Status({ loading, failed }: {loading: boolean; failed: boolean}) {
   return failed ? <Alert type="error" message="读取归档失败" /> : loading ? <Spin /> : <Empty description="本日此项尚未归档" />;
 }
-function StyleCard({day}: {day: Day}) {
+export function StyleCard({day}: {day: Day}) {
   const q = useStudy(day, "style", styleData);
   return <Card title="风格指数">{q.data ? <>
     <p>近期新高相对平均股价的当日涨跌幅差为 <strong>{decimal(q.data.spread)} 个百分点</strong>。</p>
-    {q.data.index && <p>沪深 300 收盘 {decimal(q.data.index.close)}，此前 20 日最高收盘 {decimal(q.data.index.previous20High)}。{q.data.index.divergence===null?"前一交易日占比缺失。":q.data.index.divergence?"指数创新高且站上 MA50 的成份占比回落。":"当日未出现指数创新高且均线上方占比回落的背离。"}</p>}
+    {q.data.index && <p>沪深 300 收盘 {decimal(q.data.index.close)}，此前 20 日最高收盘 {decimal(q.data.index.previous20High)}。{q.data.index.divergence===null?"前一交易日占比缺失。":q.data.index.divergence?"指数创新高且站上 MA50 的成份占比回落。建议对照逐日表，跟踪占比回落是否持续。":"当日未出现指数创新高且均线上方占比回落的背离。"}</p>}
     <Table size="small" rowKey="code" pagination={false} scroll={{x: 580}} dataSource={q.data.rows} columns={[
       {title:"指数",dataIndex:"code",render:(v: string)=>v==="880865"?"近期新高 · 880865":"平均股价 · 880003"},
       ...[["收盘","close"],["前收","previous"],["EMA5","ema5"],["EMA13","ema13"],["涨跌幅（%）","change"]].map(([title,dataIndex])=>({title,dataIndex,render:(n:number)=>decimal(n)})),
     ]}/></> : <Status loading={q.isPending} failed={q.isError}/>}</Card>;
 }
-function SectorCard({day}: {day: Day}) {
-  const q=useStudy(day,"sectors",boards);
-  return <Card title="行业容量与强度">{q.data ? <>
-    <p>容量取百日新高家数，强度取相对 {q.data.base} 收盘的涨跌幅。展开行业可查命中名单。归属未覆盖的新高股票 {q.data.unclassified.length} 家。</p>
-    <Table size="small" rowKey="code" scroll={{x:620}} pagination={{pageSize:8,showSizeChanger:false}} dataSource={q.data.rows}
-      expandable={{expandedRowRender:r=><p>新高名单　{r.hits.join("、")||"无"}<br/>{r.strengthMethod === "dailyReturns" ? "强度按该行业 20 个交易日的公布涨跌幅连乘，精度受日涨跌幅舍入影响。" : <>起点收盘 {decimal(r.start,3)}　当日收盘 {decimal(r.close,3)}</>}</p>}}
+export function SectorCard({day}: {day: Day}) {
+  const q = useStudy(day, "sectors", boards);
+  const rows = [...(q.data?.rows ?? [])].sort((a,b) => b.hits.length - a.hits.length || a.code.localeCompare(b.code));
+  const strengths = rows.flatMap(row => row.strength == null ? [] : [row.strength]).sort((a,b) => b-a);
+  const cutoff = strengths[Math.min(2, strengths.length-1)];
+  const overlap = rows.slice(0, 3).filter(row => row.hits.length > 0 && row.strength != null && row.strength >= cutoff);
+  return <Card title={day.date + " · 行业容量与强度"} className={styles.sector}>
+    {q.data && <p><strong>行业观察　</strong>{!strengths.length ? "当日缺少二十日涨幅，先按容量核对百日新高名单。"
+      : overlap.length ? overlap.map(row => row.name).join("、") + " 同时进入容量与已归档强度前三，优先展开名单，再对照前几个交易日的排名。"
+      : "容量前三与已归档的强度前三没有重合，分别查看新高股集中在哪些行业、哪些行业指数涨幅靠前。"}</p>}
+    {q.data && <p className={styles.caption}>同花顺行业 · 按百日新高家数排列。蓝框标出有数据行业中二十日涨幅前三（含并列）。展开可查新高名单。</p>}
+    {q.data ? <Table size="small" bordered rowKey="code" scroll={{x: 800}}
+      pagination={{pageSize:15,showSizeChanger:false,hideOnSinglePage:true}} dataSource={rows.map((row,i) => ({...row,rank:i+1}))}
+      expandable={{expandedRowRender:r=><p>新高名单　{r.hits.join("、")||"无"}<br/>有效样本 {r.eligible} / 成份 {r.members}。
+        强度基准日 {q.data?.base}。{r.strengthMethod === "dailyReturns" ? "按 20 个交易日公布涨跌幅连乘。" : <>起点收盘 {decimal(r.start,3)}，当日收盘 {decimal(r.close,3)}。</>}</p>}}
       columns={[
-        {title:"行业",dataIndex:"name"}, {title:"百日新高",render:(_,r)=>r.hits.length,sorter:(a,b)=>a.hits.length-b.hits.length},
-        {title:"有效样本 / 成份",render:(_,r)=>r.eligible+" / "+r.members},
-        {title:"20 日强度（%）",dataIndex:"strength",render:(v:number|null)=>v===null?"缺少指数收盘":decimal(v),sorter:(a,b)=>(a.strength??-Infinity)-(b.strength??-Infinity)},
-      ]}/></> : <Status loading={q.isPending} failed={q.isError}/>}</Card>;
+        {title:"容量序",dataIndex:"rank",sorter:(a,b)=>a.rank-b.rank},
+        {title:"代码",dataIndex:"code"}, {title:"名称",dataIndex:"name"},
+        {title:"百日新高（家）",render:(_,r)=>r.hits.length},
+        {title:"涨跌幅",render:(_,r)=>r.change == null ? "—" : <span className={r.change>0?styles.gain:r.change<0?styles.loss:undefined}>{decimal(r.change)}%</span>},
+        {title:"收盘",render:(_,r)=>decimal(r.close)},
+        {title:"总金额（亿）",render:(_,r)=>r.amount == null ? "—" : decimal(r.amount/1e8,1)},
+        {title:"二十日涨幅",render:(_,r)=> r.strength == null ? "—" :
+          <span className={r.strength>=cutoff?styles.topStrength:undefined}>{decimal(r.strength)}%</span>,
+          sorter:(a,b,order)=>a.strength==null || b.strength==null
+            ? (Number(a.strength==null)-Number(b.strength==null))*(order==="descend"?-1:1)
+            : a.strength-b.strength},
+      ]}/> : <Status loading={q.isPending} failed={q.isError}/>}
+    {q.data && <p className={styles.caption}>行业归属未覆盖的新高股票 {q.data.unclassified.length} 家。二十日涨幅已换算为百分数，原图 0.12 对应 12%。</p>}
+  </Card>;
 }
 const controls = [
   ["big","大阳实体涨幅下限（%）",1,30,5],["near","贴线或支撑距离上限（%）",0,25,2],
   ["width","平台宽度上限（%）",0,50,8],["doji","十字实体占振幅上限（%）",0,100,35],["shrink","振幅比上限",0,3,.75],
 ] as const;
-const defaults = Object.fromEntries(controls.map(([key,,,,v])=>[key,v]));
+const defaults: Record<string, number> = Object.fromEntries(controls.map(([key,,,,v])=>[key,v]));
 const names = ["上涨中继","EMA5 小平台","EMA5 大平台","EMA13 回踩","超跌回踩"];
 const noteSchema = z.object({text:z.string(),updatedAt:z.string()});
 function PatternNote({date,symbol}:{date:string;symbol:string}) {
@@ -72,7 +92,7 @@ function PatternNote({date,symbol}:{date:string;symbol:string}) {
       {note.data && <small>填写于 {new Date(note.data.updatedAt).toLocaleString("zh-CN")}</small>}
       {(save.isError||note.isError)&&<small>备注读写失败，请重试。</small>}</Space></div>;
 }
-function PatternCard({day}: {day: Day}) {
+export function PatternCard({day}: {day: Day}) {
   const [params,setParams]=useSearchParams();
   const thresholds = {...defaults};
   for (const [key,,min,max] of controls) {
@@ -107,7 +127,4 @@ function PatternCard({day}: {day: Day}) {
       columns={[{title:"股票",render:(_,r)=>r.name+" "+r.symbol},{title:"形态",dataIndex:"kind"},{title:"大阳日",dataIndex:"anchor"},
         {title:"大阳实体（%）",dataIndex:"big",render:(v:number)=>decimal(v)},{title:"候选日",dataIndex:"signalDate"},{title:"触发日",dataIndex:"triggerDate",render:(v?:string)=>v||"待观察"}]}/>
     : <Status loading={q.isPending} failed={q.isError}/>}</Card>;
-}
-export default function ReviewStudies({day}: {day: Day}) {
-  return <><StyleCard day={day}/><SectorCard day={day}/><PatternCard day={day}/></>;
 }

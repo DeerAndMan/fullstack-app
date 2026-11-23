@@ -22,7 +22,7 @@ type AppDeps struct {
 	WsHub *service.WsHub
 }
 
-func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, uploader *upload.Uploader, cfg *config.Config) *AppDeps {
+func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, uploader *upload.Uploader, cfg *config.Config, configPath string) *AppDeps {
 	// Repository
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
@@ -71,7 +71,7 @@ func initHandlers(db *gorm.DB, rdb *redis.Client, jwtManager *jwtpkg.Manager, up
 		Subscription: handlerv1.NewSubscriptionHandler(subSvc),
 		ThemeContent: handlerv1.NewThemeContentHandler(tcSvc),
 		Market:       handlerv1.NewMarketHandler(marketSvc),
-		Review:       handlerv1.NewMarketReviewHandler(reviewRepo),
+		Review:       handlerv1.NewMarketReviewHandler(reviewRepo, configPath),
 		Research:     handlerv1.NewTopicResearchHandler(researchSvc),
 	}
 

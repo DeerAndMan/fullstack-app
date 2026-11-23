@@ -33,7 +33,8 @@ def record(work, importer, row, kind, data):
     data["rule"] = {"patterns":"pullback-v1","style":"tdx-ema-csi20-v1","sectors":"ths-industry-high100-v1"}[kind]
     doc = dict(date=row["date"], batch=row["batch"], kind=kind, data=data)
     path.write_bytes(gzip.compress(json.dumps(doc, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode()))
-    subprocess.run([str(importer), "-study", str(path)], cwd=SERVER, check=True)
+    if importer is not None:
+        subprocess.run([str(importer), "-study", str(path)], cwd=SERVER, check=True)
 
 
 def style_history(work):
@@ -208,7 +209,11 @@ def evidence(work, qlib, calendar, targets, manifest):
         if day in targets:
             expected={s for s,seq in traded.items() if day in seq}
             if expected!=prices.keys(): raise ValueError(f"study roster differs {day}")
-            yield day, eligible, hits, candidates
+            # Dolt amounts are in thousands of yuan. Sum each traded A share once.
+            market_amount = None
+            if expected == extra.get(day, {}).keys():
+                market_amount = float(sum(bar[2] for bar in extra[day].values()) * 1000)
+            yield day, eligible, hits, candidates, market_amount
 
 
 def sector_snapshot(work,day,calendar,eligible,hits):
@@ -245,7 +250,7 @@ def sector_snapshot(work,day,calendar,eligible,hits):
         before=closes.get(base.replace("-","")); now=closes.get(compact)
         return dict(code=code,name=board["plate_name"],members=len(active),eligible=len(active&eligible),
                     hits=sorted(active&hits),strength=round(100*(now/before-1),4) if before and now else None,
-                    start=before,close=now)
+                    start=before,close=now,change=board.get("rate"),amount=board.get("trade_money"))
     with ThreadPoolExecutor(max_workers=2) as pool: result=list(pool.map(sector,rows))
     result.sort(key=lambda x:(-len(x["hits"]),x["code"]))
     return dict(base=base,rows=result,unclassified=sorted(hits-set().union(*(set(r["hits"]) for r in result))))
@@ -314,14 +319,15 @@ def publish(work, importer, qlib, calendar, manifest, coverage):
     need=[d for d in targets if any(k not in byday[d]["kinds"] for k in ("patterns","sectors"))]
     if not need:return
     pending=[]
-    for d,e,h,patterns in evidence(work,qlib,calendar,need,manifest):
+    for d,e,h,patterns,market_amount in evidence(work,qlib,calendar,need,manifest):
         if "patterns" not in byday[d]["kinds"]:
             record(work,importer,byday[d],"patterns",dict(rows=patterns))
         if "sectors" not in byday[d]["kinds"]:
-            pending.append((d,e,h))
+            pending.append((d,e,h,market_amount))
     # Publish the latest sector ranking first, then fill older sessions.
-    for d,e,h in reversed(pending):
+    for d,e,h,market_amount in reversed(pending):
         snapshot = sector_snapshot(work,d,calendar,e,h)
+        snapshot["marketAmount"] = market_amount
         complete_sector_strength(work, {d:snapshot}, calendar)
         record(work,importer,byday[d],"sectors",snapshot)
         print(d,"行业归档已发布",flush=True)

@@ -21,16 +21,27 @@ import (
 )
 
 type MarketReviewHandler struct {
-	repo *repository.MarketReviewRepository
+	repo    *repository.MarketReviewRepository
+	refresh reviewRefresh
 }
 
-func NewMarketReviewHandler(repo *repository.MarketReviewRepository) *MarketReviewHandler {
-	return &MarketReviewHandler{repo}
+func NewMarketReviewHandler(repo *repository.MarketReviewRepository, configPath string) *MarketReviewHandler {
+	return &MarketReviewHandler{repo: repo, refresh: reviewRefresh{config: configPath}}
 }
 
 func (h *MarketReviewHandler) Dates(ctx context.Context, c *app.RequestContext) {
 	dates, err := h.repo.Dates(ctx)
 	writeMarketResult(ctx, c, dates, err)
+}
+
+func (h *MarketReviewHandler) Timeline(ctx context.Context, c *app.RequestContext) {
+	through := c.Query("through")
+	if _, err := time.Parse(time.DateOnly, through); err != nil {
+		response.Fail(ctx, c, errcode.ErrBadRequest)
+		return
+	}
+	rows, err := h.repo.Timeline(ctx, through)
+	writeMarketResult(ctx, c, rows, err)
 }
 
 func (h *MarketReviewHandler) Daily(ctx context.Context, c *app.RequestContext) {
