@@ -63,8 +63,9 @@ export const Login = () => {
             labelCol={{ span: 8 }}
             wrapperCol={{ span: 16 }}
             initialValues={{
-              username: "test_name",
-              password: "112233TT__TT",
+              ...((import.meta.env.MODE === "development" || import.meta.env.MODE === "test")
+                ? { username: "test_name", password: "112233TT__TT" }
+                : {}),
               remember: true,
             }}
             onFinish={onFinish}
