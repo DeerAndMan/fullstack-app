@@ -118,7 +118,7 @@
 .coreTips th, .coreTips td { text-align: left; vertical-align: top; padding: 7px; border-bottom: 1px solid #8885; }
 .coreTips th:first-child { width: 6.5em; }
 .updateBox { display: grid; gap: 5px; }
-.updateBox input { border: 1px solid #8886; border-radius: 5px; padding: 3px 6px; color: inherit; }
+.updateBox input, .updateBox select { border: 1px solid #8886; border-radius: 5px; padding: 3px 6px; color: inherit; }
 .updateBox small { opacity: .75; }
 
 .refreshNotice { margin-bottom: 12px; }

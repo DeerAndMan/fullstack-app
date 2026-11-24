@@ -12,12 +12,17 @@ import (
 type ReviewTimelineRow struct {
 	Batch           string              `json:"batch"`
 	Advice          *model.ReviewAdvice `json:"advice,omitempty"`
+	AdvicePending   bool                `json:"advicePending,omitempty"`
 	Date            string              `json:"date"`
 	Up              int                 `json:"up"`
 	Highs           int                 `json:"highs"`
 	Above           int                 `json:"above"`
 	Eligible        int                 `json:"eligible"`
+	BeijingHighs    *int                `json:"beijingHighs"`
+	BeijingEligible int                 `json:"beijingEligible,omitempty"`
 	HighDelta       *int                `json:"highDelta"`
+	AverageState    string              `json:"averageState,omitempty"`
+	StyleBias       string              `json:"styleBias,omitempty"`
 	AverageChange   *float64            `json:"averageChange"`
 	IndexDivergence *bool               `json:"indexDivergence"`
 	MarketAmount    *float64            `json:"marketAmount"`
@@ -74,17 +79,18 @@ func decodeTimelineStudy(raw []byte, value any) error {
 
 func (r *ReviewTimelineRow) readStudies(style, sectors []byte) error {
 	if style != nil {
-		var s struct {
-			Rows []struct {
-				Code   string
-				Change *float64
-			}
-			Index struct{ Divergence *bool }
-		}
+		var s model.ReviewStyleData
 		if err := decodeTimelineStudy(style, &s); err != nil {
 			return err
 		}
 		r.IndexDivergence = s.Index.Divergence
+		r.MarketAmount = s.MarketAmount
+		if s.Beijing != nil && s.Beijing.Date == r.Date {
+			r.BeijingHighs = s.Beijing.Highs
+			r.BeijingEligible = s.Beijing.Eligible
+		}
+		r.AverageState, r.StyleBias = s.Labels()
+		r.AdvicePending = s.DeferredAdvice && sectors == nil
 		for _, index := range s.Rows {
 			if index.Code == "880003" {
 				r.AverageChange = index.Change
@@ -103,7 +109,9 @@ func (r *ReviewTimelineRow) readStudies(style, sectors []byte) error {
 		if err := decodeTimelineStudy(sectors, &s); err != nil {
 			return err
 		}
-		r.MarketAmount = s.MarketAmount
+		if r.MarketAmount == nil {
+			r.MarketAmount = s.MarketAmount
+		}
 		sort.Slice(s.Rows, func(i, j int) bool {
 			a, b := s.Rows[i], s.Rows[j]
 			if len(a.Hits) == len(b.Hits) {

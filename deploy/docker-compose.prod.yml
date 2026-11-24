@@ -12,9 +12,11 @@ services:
 
   server:
     build:
-      context: ../../server
+      context: ../server
       dockerfile: ../deploy/docker/Dockerfile.server
     container_name: fullstack-server
+    environment:
+      - DEEPSEEK_API_KEY
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -25,6 +27,7 @@ services:
         condition: service_started
     volumes:
       - uploads:/app/uploads
+      - review-cache:/app/tmp
 
   mysql:
     image: mysql:8.0
@@ -52,6 +55,7 @@ services:
       - redis-data:/data
 
 volumes:
+  review-cache:
   mysql-data:
   redis-data:
   uploads:

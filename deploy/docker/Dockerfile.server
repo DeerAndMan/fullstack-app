@@ -8,7 +8,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /server ./cmd/server
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /import-review ./cmd/import-review
 
 FROM alpine:3.22
-RUN apk add --no-cache ca-certificates curl python3 tzdata
+RUN apk add --no-cache ca-certificates curl python3 tzdata py3-pandas py3-pip
+RUN pip3 install --break-system-packages --no-cache-dir --no-deps baostock==0.9.4
+
 WORKDIR /app/server
 COPY scripts/*.py ./scripts/
 COPY --from=builder /import-review /usr/local/bin/import-review

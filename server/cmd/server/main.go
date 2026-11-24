@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -90,6 +91,9 @@ func main() {
 		logger.Fatal("resolve config path", zap.Error(err))
 	}
 	deps := initHandlers(db, rdb, jwtManager, uploader, cfg, configFile)
+	reviewCtx, stopReview := context.WithCancel(context.Background())
+	defer stopReview()
+	go deps.V1.Review.RunCloseRefresh(reviewCtx)
 
 	// Hertz server
 	h := server.Default(

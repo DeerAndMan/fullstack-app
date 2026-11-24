@@ -138,6 +138,21 @@ function Members({ day, metric, close }: { day: Day; metric: Metric; close: () =
   );
 }
 
+const apiLabels: Record<string, string> = {
+  "baostock.com": "BaoStock", "quantapi.51ifind.com": "同花顺 iFinD", "help.tdx.com.cn": "通达信",
+  "quantapi.eastmoney.com": "东方财富 Choice", "tushare.pro": "Tushare Pro",
+  "stock.qq.com": "腾讯财经", "finance.sina.com.cn": "新浪财经",
+};
+
+function reviewSourceLabel(source: string) {
+  const host = URL.canParse(source) ? new URL(source).hostname : "";
+  return apiLabels[host] ?? (host === "api.zizizaizai.com" ? "自在量化" : host || source);
+}
+
+function isApiReview(source: string) {
+  return URL.canParse(source) && new URL(source).hostname in apiLabels;
+}
+
 function Daily({ day, delta, selectDate }: { day: Day; delta: number | null; selectDate: (date: string) => void }) {
   const [metric, setMetric] = useState<Metric>();
   const [params, setParams] = useSearchParams();
@@ -212,7 +227,7 @@ function Daily({ day, delta, selectDate }: { day: Day; delta: number | null; sel
       <details className={styles.method}><summary>统计口径、排除明细与来源</summary>
         <p>
           沪深 A 股（含 ST）。当日股票池 {day.total} 家，{day.total - day.traded}{" "}
-          家两源均无当日成交日线。上涨按收盘日涨跌幅大于零计。
+          家无当日有效成交日线。上涨按收盘日涨跌幅大于零计。
         </p>
         <p>
           一年新高取当日最高价严格超过此前 249 根有效日线最高价，历史价格按当日复权基准比较。有效日线不足的有{" "}
@@ -235,16 +250,13 @@ function Daily({ day, delta, selectDate }: { day: Day; delta: number | null; sel
       <footer>
         当日行情{" "}
         <a href={day.source} target="_blank" rel="noreferrer">
-          {day.source.startsWith("https://api.zizizaizai.com/") ? "自在量化" : "Money Tree"}
+          {reviewSourceLabel(day.source)}
         </a>{" "}
-        · 历史行情与交易日核对{" "}
-        <a
-          href={"https://github.com/chenditc/investment_data/releases/tag/" + day.release}
-          target="_blank"
-          rel="noreferrer"
-        >
-          investment_data {day.release}
-        </a>
+        {isApiReview(day.source) ? " · 交易日、历史个股行情及复权因子来自 BaoStock" : <>
+          · 历史行情与交易日核对{" "}
+          <a href={"https://github.com/chenditc/investment_data/releases/tag/" + day.release}
+            target="_blank" rel="noreferrer">investment_data {day.release}</a>
+        </>}
         {(day.source.includes("/daily_kline/date/") || day.source.includes("/v3/market/kline/day?")) && (
           <>
             {" "}
@@ -309,7 +321,7 @@ export default function MarketReview() {
             onChange={selectDate}
           />
         </label>
-        <ReviewUpdate selectDate={selectDate}/>
+        <ReviewUpdate selectDate={selectDate} requestedDate={params.get("date") ?? undefined}/>
       </header>
       {dates.isError || daily.isError ? (
         <Alert

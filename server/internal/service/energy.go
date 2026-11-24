@@ -1,8 +1,8 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -26,28 +26,43 @@ func NewEnergyService(energyRepo *repository.EnergyRepository, statsSvc *TradeSt
 }
 
 func (s *EnergyService) InsertAssets(data []model.Assets) error {
+	if len(data) == 0 {
+		return nil
+	}
+	now := time.Now()
+	snapshotTime := now.Format("2006-01-02 15:04:05")
+	snapshots := make([]repository.AssetSnapshot, 0, len(data))
 	for _, item := range data {
 		if len(item.Positions) <= 0 {
 			return errcode.New(400, "Positions 数据不存在", 400)
 		}
-		for i := range item.Positions {
-			if item.Positions[i].DATETIME == "" {
-				item.Positions[i].DATETIME = time.Now().Format("2006-01-02 15:04:05")
+		snapshot := repository.AssetSnapshot{Positions: slices.Clone(item.Positions)}
+		for i := range snapshot.Positions {
+			if snapshot.Positions[i].DATETIME == "" {
+				snapshot.Positions[i].DATETIME = snapshotTime
 			}
 		}
-		if err := s.energyRepo.BatchInsertPositions(item.Positions, 100); err != nil {
-			return errcode.New(500, "插入 Positions 失败", 500)
+		if err := copier.Copy(&snapshot.Summary, &item); err != nil {
+			return errcode.New(500, "构建资产快照失败", 500)
 		}
+		snapshot.Summary.Date = snapshotTime
+		snapshot.Summary.Drhz = "0"
+		dryk, drykErr := strconv.ParseFloat(item.Dryk, 64)
+		zzc, zzcErr := strconv.ParseFloat(item.Zzc, 64)
+		if drykErr == nil && zzcErr == nil && zzc != 0 {
+			snapshot.Summary.Drhz = fmt.Sprintf("%.4f", dryk/zzc)
+		}
+		snapshots = append(snapshots, snapshot)
 	}
 
-	if err := s.insertSummaryData(data); err != nil {
-		return err
+	if err := s.energyRepo.CreateSnapshots(snapshots); err != nil {
+		return errcode.New(500, "保存资产快照失败", 500)
 	}
 
 	// 刷新当天日终快照，使汇总统计实时跟随最新推送。
 	// 快照同步失败不影响本次数据写入，仅记录告警日志。
 	if s.statsSvc != nil {
-		today := time.Now().Format("2006-01-02")
+		today := now.Format("2006-01-02")
 		if _, err := s.statsSvc.SyncDailySnapshots(&SyncDailyRequest{StartDate: today, EndDate: today}); err != nil {
 			zap.L().Warn("刷新日终快照失败", zap.Error(err))
 		}
@@ -56,35 +71,6 @@ func (s *EnergyService) InsertAssets(data []model.Assets) error {
 	// 彩色打印持仓汇总到控制台
 	printAssetsInfo(data)
 
-	return nil
-}
-
-func (s *EnergyService) insertSummaryData(data []model.Assets) error {
-	for _, v := range data {
-		summary := model.Summary{}
-		if err := copier.Copy(&summary, &v); err != nil {
-			return errcode.New(500, "插入 Summary 失败", 500)
-		}
-
-		drykNum, drykErr := strconv.ParseFloat(v.Dryk, 64)
-		zzcNum, zzcErr := strconv.ParseFloat(v.Zzc, 64)
-		if drykErr == nil && zzcErr == nil && zzcNum != 0 {
-			summary.Drhz = fmt.Sprintf("%.4f", drykNum/zzcNum)
-		} else {
-			summary.Drhz = "0"
-		}
-
-		summary.Date = time.Now().Format("2006-01-02 15:04:05")
-		positionsJson, err := json.Marshal(v.Positions)
-		if err != nil {
-			return errcode.New(500, "序列化 Positions 失败", 500)
-		}
-		summary.Positions = string(positionsJson)
-
-		if err := s.energyRepo.CreateSummary(&summary); err != nil {
-			return errcode.New(500, "插入 Summary 失败", 500)
-		}
-	}
 	return nil
 }
 

@@ -7,7 +7,7 @@ import styles from "./review.module.css";
 import { RequestGet, RequestPut } from "@/api/request-schema";
 
 const styleData = z.object({
-  spread: z.number(),
+  spread: z.number().nullable(),
   index: z.object({close:z.number(),previous:z.number(),previous20High:z.number(),divergence:z.boolean().nullable()}).optional(),
   rows: z.array(z.object({ code: z.string(), close: z.number(), previous: z.number(), ema5: z.number(), ema13: z.number(), change: z.number() })),
 });
@@ -33,7 +33,8 @@ function Status({ loading, failed }: {loading: boolean; failed: boolean}) {
 export function StyleCard({day}: {day: Day}) {
   const q = useStudy(day, "style", styleData);
   return <Card title="风格指数">{q.data ? <>
-    <p>近期新高相对平均股价的当日涨跌幅差为 <strong>{decimal(q.data.spread)} 个百分点</strong>。</p>
+    {q.data.spread != null ? <p>近期新高相对平均股价的当日涨跌幅差为 <strong>{decimal(q.data.spread)} 个百分点</strong>。</p> :
+      <p>当日风格指数尚未归档，可点击「更新数据」一并获取。</p>}
     {q.data.index && <p>沪深 300 收盘 {decimal(q.data.index.close)}，此前 20 日最高收盘 {decimal(q.data.index.previous20High)}。{q.data.index.divergence===null?"前一交易日占比缺失。":q.data.index.divergence?"指数创新高且站上 MA50 的成份占比回落。建议对照逐日表，跟踪占比回落是否持续。":"当日未出现指数创新高且均线上方占比回落的背离。"}</p>}
     <Table size="small" rowKey="code" pagination={false} scroll={{x: 580}} dataSource={q.data.rows} columns={[
       {title:"指数",dataIndex:"code",render:(v: string)=>v==="880865"?"近期新高 · 880865":"平均股价 · 880003"},

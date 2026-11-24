@@ -3,7 +3,7 @@ import { Alert, Button, Card, Popover, Table } from "antd";
 import type { TableColumnsType } from "antd";
 import { z } from "zod";
 import { RequestGet, RequestPost } from "@/api/request-schema";
-import { ReviewRefreshNotice } from "./review-update";
+import { ReviewRefreshNotice, useRefreshStatus } from "./review-update";
 import styles from "./review.module.css";
 
 const adviceSchema = z.object({
@@ -12,7 +12,9 @@ const adviceSchema = z.object({
 });
 const timeline = z.array(z.object({
   date: z.string(), batch: z.string(), advice: adviceSchema.optional(), up: z.number(), highs: z.number(), above: z.number(), eligible: z.number(),
+  beijingHighs: z.number().nullish(), beijingEligible: z.number().optional(),
   highDelta: z.number().nullable(), averageChange: z.number().nullable(), indexDivergence: z.boolean().nullable(),
+  averageState: z.string().optional(), styleBias: z.string().optional(), advicePending: z.boolean().optional(),
   marketAmount: z.number().nullable(), capacityLeaders: z.array(z.string()).nullable(),
 }));
 type Session = z.infer<typeof timeline>[number];
@@ -43,6 +45,7 @@ function AdvicePanel({row}: {row: Session}) {
     <strong>{row.date} · AI 复盘建议</strong>
     {advice ? <><p>{advice.market}</p><p><b>买入评估　</b>{advice.buy}</p>
       <small>{advice.model} · {new Date(advice.generatedAt).toLocaleString("zh-CN")} 生成 · 依据当日收盘归档</small></>
+      : row.advicePending ? <p>行业和形态归档完成后生成建议。</p>
       : <><Button loading={generate.isPending} onClick={() => generate.mutate()}>生成并保存当日建议</Button>
         {generate.isError && <Alert type="error" message="AI 建议生成失败，可重试。"/>}</>}
   </section>;
@@ -59,8 +62,12 @@ function divergence(row: Session) {
 }
 
 export default function ReviewTimeline({ date, select }: { date?: string; select: (date: string) => void }) {
+  const run = useRefreshStatus().data?.run;
+  const updatingDate = run?.state === "running" ? run.date : undefined;
   const history = useQuery({
     queryKey: ["review-timeline", date], enabled: !!date,
+    refetchInterval: q => updatingDate && q.state.data?.some(r =>
+      r.date === updatingDate && (r.capacityLeaders == null || !r.advice)) ? 5_000 : false,
     select: (rows: Session[]) => [...rows].sort((a, b) => b.date.localeCompare(a.date)),
     queryFn: async ({signal}) => (await RequestGet("/api/v1/review/timeline", {
       params: {through: date}, schema: timeline, signal,
@@ -70,18 +77,22 @@ export default function ReviewTimeline({ date, select }: { date?: string; select
   const columns: TableColumnsType<Session> = [
     {title: "日期", dataIndex: "date", fixed: "left", width: 105,
       render: (value: string) => <button className={styles.dateLink} aria-current={value === date ? "date" : undefined} onClick={() => select(value)}>{value}</button>},
-    {title: "平均股价状态", render: (_, r) => r.advice?.averageState || missing},
-    {title: "风格偏向", render: (_, r) => r.advice?.styleBias || missing},
+    {title: "平均股价状态", render: (_, r) => r.averageState || r.advice?.averageState || missing},
+    {title: "风格偏向", render: (_, r) => r.styleBias || r.advice?.styleBias || missing},
     {title: "上涨家数", dataIndex: "up", render: (n: number) => <span className={n < 1000 ? styles.cold : undefined}>{n}</span>},
     {title: "平均股价涨跌", render: (_, r) => r.averageChange == null ? missing :
       <span className={r.averageChange > 0 ? styles.gain : r.averageChange < 0 ? styles.loss : undefined}>{r.averageChange.toFixed(2)}%</span>},
     {title: "背离观察", render: (_, r) => divergence(r)},
     {title: "一年新高", render: (_, r) => <span className={r.highs < 20 ? styles.cold : styles.highs}>{r.highs}</span>},
-    {title: "含北交", render: () => <span className={styles.missing} title="缺少北交所同口径的一年新高行情">—</span>},
+    {title: "含北交", render: (_, r) => r.beijingHighs == null ? missing :
+      <span title={`沪深新高 ${r.highs} 家，北交所新高 ${r.beijingHighs} 家（符合 250 根日线条件 ${r.beijingEligible ?? 0} 家）`}>{r.highs + r.beijingHighs}</span>},
     {title: "成交额（亿）", render: (_, r) => r.marketAmount == null ? missing : (r.marketAmount / 1e8).toFixed(0)},
     {title: <>核心强势板块<small className={styles.leaders}>容量前三参考</small></>, width: 205,
-      render: (_, r) => r.capacityLeaders == null ? missing : r.capacityLeaders.join("、") || "无"},
-    {title: "板块状态 · AI", render: (_, r) => r.advice?.sectorState || missing},
+      render: (_, r) => r.capacityLeaders?.join("、") || (r.capacityLeaders ? "无" :
+        r.date === updatingDate ? "正在核对行业" : "尚未归档")},
+    {title: "板块状态 · AI", render: (_, r) => r.advice?.sectorState || (r.date === updatingDate && !r.advice
+      ? r.capacityLeaders == null ? "等待行业数据" : "正在生成建议"
+      : "尚无板块解读")},
     {title: "沪深300 50日占比", width: 110, render: (_, r) => {
       if (!r.eligible) return missing;
       const ratio = 100 * r.above / r.eligible;

@@ -120,6 +120,9 @@ func (s *TopicResearchService) reviewEvidence(ctx context.Context, question stri
 	r.Sources = []ResearchSource{{ID: "R1", Provider: "复盘归档", Title: "收盘统计与逐股明细", URL: "/hotspots/review?date=" + day.Date, Kind: "original", Date: day.Date}}
 	r.Notes = append(r.Notes, fmt.Sprintf("沪深当日股票池 %d 家，有当日成交日线 %d 家。新高窗口不足 %d 家，沪深 300 的 MA50 排除 %d 家。", day.Total, day.Traded, day.Traded-day.HighEligible, day.CSI-day.Eligible))
 	r.Notes = append(r.Notes, "按日涨跌幅计上涨；复权最高价严格突破此前 249 根有效日线；收盘严格高于含当日的 MA50。规则 "+day.Rule+"，批次 "+day.Batch)
+	if day.Source != "" {
+		r.Sources = append(r.Sources, ResearchSource{ID: "R2", Provider: "行情源", Title: "归档使用的日线来源", URL: day.Source, Kind: "original", Date: day.Date})
+	}
 	if prev, e := s.Reviews.Day(ctx, day.Previous, ""); e == nil && prev.Rule == day.Rule {
 		delta := day.Highs - prev.Highs
 		r.Notes = append(r.Notes, fmt.Sprintf("较 %s，一年新高家数变化 %+d。", prev.Date, delta))

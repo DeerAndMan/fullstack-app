@@ -151,12 +151,27 @@ func run() error {
 	}
 	path := flag.String("config", defaultConfig, "project config")
 	refresh := flag.Bool("refresh", false, "atomically publish one prepared daily archive, its studies and fresh AI advice")
+	core := flag.Bool("core", false, "atomically publish one verified daily archive and its style study")
 	list := flag.Bool("dates", false, "list archived dates as JSON")
+	readStyle := flag.Bool("read-style", false, "read the archived style payload for a date and batch")
 	coverage := flag.Bool("studies", false, "list study coverage by current review batch")
 	advice := flag.Bool("advice", false, "generate or reuse archived AI advice for the supplied trading dates")
 	study := flag.Bool("study", false, "import gzipped review study")
+	cacheRead := flag.String("read-quote-cache", "", "export rolling BaoStock windows to a temporary directory")
+	cacheWrite := flag.Bool("write-quote-cache", false, "store verified rolling BaoStock windows")
+	styleBars := flag.String("style-bars", "", "read dated daily bars for the two style indices")
+	beijingBars := flag.String("beijing-bars", "", "read dated Beijing stock bars and corporate actions")
 	flag.Parse()
-	if !*list && !*coverage && flag.NArg() == 0 {
+	if *beijingBars != "" {
+		return writeBeijingBars(*beijingBars, flag.Args())
+	}
+	if *styleBars != "" {
+		return writeStyleBars(*styleBars)
+	}
+	if *core && *refresh {
+		return fmt.Errorf("-core and -refresh are mutually exclusive")
+	}
+	if *cacheRead == "" && !*list && !*coverage && flag.NArg() == 0 {
 		return fmt.Errorf("supply one or more daily .json.gz artifacts")
 	}
 	cfg, err := config.Load(*path)
@@ -167,8 +182,26 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	if *cacheRead != "" || *cacheWrite {
+		return quoteCache(db, *cacheRead, flag.Args())
+	}
 	repo := repository.NewMarketReviewRepository(db)
-	if *refresh {
+	if *readStyle {
+		if flag.NArg() != 2 {
+			return fmt.Errorf("expected date and batch")
+		}
+		ctx := context.Background()
+		day, err := repo.Day(ctx, flag.Arg(0), flag.Arg(1))
+		if err != nil {
+			return err
+		}
+		raw, err := repo.Study(ctx, day.ID, "style")
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(raw)
+	}
+	if *refresh || *core {
 		if flag.NArg() != 1 {
 			return fmt.Errorf("expected a single daily artifact")
 		}
@@ -186,11 +219,18 @@ func run() error {
 			if err != nil {
 				return err
 			}
-			for _, kind := range []string{"style", "sectors", "patterns"} {
+			kinds := []string{"style"}
+			if *refresh {
+				kinds = append(kinds, "sectors", "patterns")
+			}
+			for _, kind := range kinds {
 				file := filepath.Join(filepath.Dir(archive), date+"-"+kind+".json.gz")
 				if err := importStudy(reviews, file, &studyIdentity{date, day.Batch, kind}); err != nil {
 					return err
 				}
+			}
+			if *core {
+				return nil
 			}
 			if err := tx.Where("day_id=? AND kind=?", day.ID, model.ReviewAdviceKind).Delete(&model.MarketReviewStudy{}).Error; err != nil {
 				return err
