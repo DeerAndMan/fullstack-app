@@ -49,7 +49,7 @@ func TestResearchSkillsSeedNewMethodsForExistingAccount(t *testing.T) {
 		}
 		seeded[skill.ID] = true
 		added = append(added, skill)
-		args = append(args, sqlmock.AnyArg(), sqlmock.AnyArg(), nil, userID, skill.ID, skill.Name, skill.Instructions)
+		args = append(args, sqlmock.AnyArg(), sqlmock.AnyArg(), nil, userID, skill.ID, skill.Name, skill.Instructions, false, 0, 0)
 	}
 	if len(added) < 8 {
 		t.Fatalf("expected the expanded research catalog, got %d new methods", len(added))
@@ -62,7 +62,7 @@ func TestResearchSkillsSeedNewMethodsForExistingAccount(t *testing.T) {
 		return rows
 	}
 
-	read := regexp.QuoteMeta("SELECT * FROM `topic_research_skills` WHERE user_id = ? AND `topic_research_skills`.`deleted_at` IS NULL ORDER BY id ASC")
+	read := regexp.QuoteMeta("SELECT * FROM `topic_research_skills` WHERE user_id = ? AND `topic_research_skills`.`deleted_at` IS NULL ORDER BY sort_order DESC, id ASC")
 	mock.ExpectQuery(read).WithArgs(userID).WillReturnRows(existingRows())
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO `topic_research_skills` .* ON DUPLICATE KEY UPDATE").

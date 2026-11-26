@@ -441,7 +441,7 @@ export default function Hotspots() {
         <h1>市场热点</h1>
         <div className={styles.headerActions}>
           <Link to={ROUTER_PATH.marketReview}>复盘</Link>
-          <Link to={ROUTER_PATH.research}>题材查询</Link>
+          <Link to={ROUTER_PATH.research}>AI查询</Link>
           <time dateTime={localDate()}>{displayMarketDate(localDate())} · 北京时间</time>
           <Button type="primary" icon={<ReloadOutlined aria-hidden />} loading={refreshing} onClick={() => void refresh()}>刷新数据</Button>
         </div>

@@ -1,5 +1,17 @@
 package service
 
+import (
+	_ "embed"
+	"slices"
+)
+
+//go:embed minesweeper.txt
+var minesweeperInstructions string
+
+func usesMinesweeper(skills []ResearchSkill) bool {
+	return slices.ContainsFunc(skills, func(skill ResearchSkill) bool { return skill.seedKey == skillMinesweeper })
+}
+
 type ResearchSkill struct {
 	ID              string `json:"id"`
 	Name            string `json:"name"`
@@ -7,6 +19,8 @@ type ResearchSkill struct {
 	Required        bool   `json:"required"`
 	BuiltIn         bool   `json:"builtIn"`
 	DefaultSelected bool   `json:"defaultSelected,omitempty"`
+	Markdown        bool   `json:"markdown,omitempty"`
+	GroupID         uint   `json:"groupId,omitempty"`
 	seedKey         string
 }
 
@@ -15,6 +29,7 @@ const (
 	skillOrderConversion = "builtin:order-conversion"
 	skillIndustryCycle   = "builtin:industry-cycle"
 	skillCounterEvidence = "builtin:counter-evidence"
+	skillMinesweeper     = "builtin:minesweeper"
 )
 
 func initialResearchSkills() []ResearchSkill {
@@ -41,6 +56,18 @@ func initialResearchSkills() []ResearchSkill {
 		{
 			ID: "builtin:earnings-quality", Name: "财报质量与现金流",
 			Instructions: `适用于核验盈利质量、现金回款及财务异常。以定期报告、报表附注和更正公告为准，按同一合并口径和可比期间对照营收、归母净利润、扣非归母净利润、经营现金流及现金资本开支。利润与现金流背离时，查应收及合同资产、存货、应付和票据变化，结合季节性、回款条款及一次性损益解释。现金流与利润的口径不一致时说明差异，利润接近零或为负时比较金额与趋势。按指标、期间、变化、可能原因和原文出处给出结论，附注不足时标明待查项目。`,
+		},
+		{
+			ID: skillMinesweeper, Name: "财报排雷（minesweeper）", Instructions: minesweeperInstructions,
+		},
+		{
+			ID: "builtin:long-term-thesis", Name: "长线假设与股东回报",
+			Instructions: `适用于判断行业增长能否持续、相关公司能否把增长转化为股东回报。先写明长期判断依赖的关键假设，再按问题选择核验：
+1. 需求从哪里来？对照细分行业销量、渗透率与公司份额，拆开市场扩容、提价和抢占份额的贡献。指出增长依赖的人口、信贷、政策或技术条件，以及条件变化会影响哪些业务。
+2. 守住利润要花多少钱？结合多期年报和资本开支说明，区分维持现有业务与扩张所需投入，观察资本回报率和自由现金流。披露未拆分时保留未知项。
+3. 竞争加剧后还能守住什么？对照同业的售价、份额和利润率，检验品牌、成本或客户黏性能否保护盈利。若靠降价保住份额，说明利润付出的代价。
+4. 现金最终去了哪里？对照经营现金流、资本开支、实际分红与回购，核查管理层如何在再投资和回报股东之间分配现金，以及新增投入取得了什么回报。
+引用报告期和原始出处，区分行业数据与公司披露。用最关键的证据说明哪项假设得到支持、受到挑战或仍待验证，并列出下一次能改变判断的指标或披露。将红利消退、技术颠覆视为待检验情景。`,
 		},
 		{
 			ID: skillOrderConversion, Name: "订单兑现与业绩弹性",

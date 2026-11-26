@@ -7,7 +7,8 @@ import { withTokenColors } from "../hotspots/panels";
 import { updateTime } from "../hotspots/data";
 import {
   listResearchRuns,
-  listResearchSkills,
+  listSkillCatalog,
+  groupSkills,
   readResearchRun,
   startResearchRun,
   researchError,
@@ -40,9 +41,9 @@ function Chat({ account }: { account?: number }) {
     getNextPageParam: last => (last.length === 20 ? last.at(-1)?.id : undefined),
     refetchInterval: q => (q.state.data?.pages.some(p => p.some(r => r.status === "running")) ? 10000 : false),
   });
-  const skills = useQuery({ queryKey: ["topic-research", account, "skills"], queryFn: listResearchSkills });
-  const selectedSkills = (editing?.skillIds ?? selected ?? skills.data?.filter(skill => skill.defaultSelected).map(skill => skill.id) ?? [])
-    .filter(id => !skills.data || skills.data.some(skill => skill.id === id));
+  const skills = useQuery({ queryKey: ["topic-research", account, "skill-catalog"], queryFn: listSkillCatalog });
+  const selectedSkills = (editing?.skillIds ?? selected ?? skills.data?.skills.filter(skill => skill.defaultSelected).map(skill => skill.id) ?? [])
+    .filter(id => !skills.data || skills.data.skills.some(skill => skill.id === id));
   const { hasNextPage, isFetching, isFetchNextPageError, fetchNextPage } = runs;
   useEffect(() => {
     if (hasNextPage && !isFetching && !isFetchNextPageError) void fetchNextPage();
@@ -100,7 +101,7 @@ function Chat({ account }: { account?: number }) {
   return (
     <main className={styles.page} style={withTokenColors(token)}>
       <header className={styles.pageHeader}>
-        <h1>题材查询</h1>
+        <h1>AI查询</h1>
         <Link to="/research/skills" state={{ run: id }}>
           管理 Skill →
         </Link>
@@ -222,11 +223,13 @@ function Chat({ account }: { account?: number }) {
                 </button>
               </div>
             )}
-            <Input.TextArea
+            <textarea
               id="research-message"
+              className={styles.questionEditor}
               aria-label="对话问题"
+              aria-describedby="research-editor-hint"
               placeholder={id ? "继续追问这段对话…" : "输入想研究的题材…"}
-              autoSize={{ minRows: 2, maxRows: 5 }}
+              rows={3}
               maxLength={120}
               value={question}
               onChange={e => setQuestion(e.target.value)}
@@ -237,6 +240,10 @@ function Chat({ account }: { account?: number }) {
                 }
               }}
             />
+            <div className={styles.editorMeta}>
+              <span id="research-editor-hint">拖动右下角调整大小 · Ctrl / ⌘ + Enter 发送</span>
+              <span>{question.length} / 120</span>
+            </div>
             <div className={styles.composeActions}>
               <Select
                 mode="multiple"
@@ -246,7 +253,9 @@ function Chat({ account }: { account?: number }) {
                 value={selectedSkills}
                 optionFilterProp="label"
                 onChange={skillIds => editing ? setEditing({ ...editing, skillIds }) : setSelected(skillIds)}
-                options={skills.data?.map(s => ({ label: s.name, value: s.id }))}
+                options={groupSkills(skills.data).filter(group => group.skills.length).map(group => ({
+                  label: group.name, options: group.skills.map(skill => ({ label: skill.name, value: skill.id })),
+                }))}
               />
               <Button
                 type="primary"

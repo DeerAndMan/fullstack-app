@@ -48,11 +48,22 @@ var blanketSupplyClaim = regexp.MustCompile(`(?:没有|并无|暂无|并没有|�
 
 // Reply streams the conversational answer after the structured evidence has been checked.
 func (s *TopicResearchService) streamReply(ctx context.Context, id uint, key, question string, skills []ResearchSkill, reference *ResearchRunView, report ResearchReport) string {
-	if text := combinedSkillReply(question, report.SkillChecks); text != "" {
-		s.replies.Store(id, text)
-		return text
+	minesweeper := usesMinesweeper(skills)
+	client := s.client
+	timeout := 25 * time.Second
+	maxTokens := 800
+	if minesweeper {
+		// A complete checklist takes longer to stream than the ordinary research summary.
+		timeout = 75 * time.Second
+		maxTokens = 4200
+		client = &http.Client{Transport: s.client.Transport, CheckRedirect: s.client.CheckRedirect, Timeout: timeout}
+	} else {
+		if text := combinedSkillReply(question, report.SkillChecks); text != "" {
+			s.replies.Store(id, text)
+			return text
+		}
 	}
-	scope, cancel := context.WithTimeout(ctx, 25*time.Second)
+	scope, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	materials := map[string]any{"question": question, "skills": skills, "topics": report.Topics, "conclusion": report.Conclusion, "notes": report.Notes, "observations": report.Observations, "candidates": report.Candidates[:min(50, len(report.Candidates))]}
 	if len(report.SkillChecks) > 0 {
@@ -80,8 +91,19 @@ func (s *TopicResearchService) streamReply(ctx context.Context, id uint, key, qu
 		s.replies.Store(id, lead)
 		instruction += " 系统已在回复开头显示上述范围说明。直接补充当前资料中的具体公司、证据和出处，不重复总括结论。"
 	}
+	if minesweeper {
+		passages := map[string]string{}
+		for _, source := range report.Sources {
+			if source.content != "" {
+				passages[source.ID] = skillSourcePassages(source.content, []string{"审计意见", "主要会计数据", "经营活动产生", "投资活动产生", "应收账款", "存货", "运输费", "在建工程", "商誉", "前五名", "非经营性占用", "研发投入", "财务总监", "独立董事", "立案"})
+			}
+		}
+		materials["disclosurePassages"] = passages
+		materials["sources"] = report.Sources
+		instruction += " 按所选财报排雷指令给出逐项判定和评分。disclosurePassages 为以来源编号标记的披露节选，核对公司、年份、单位及上下文后再引用。缺少全文或数据时列出对应的 SKIP，不得把节选未提及的问题判为 PASS。"
+	}
 	input, _ := json.Marshal(materials)
-	body, _ := json.Marshal(map[string]any{"model": researchModel, "stream": true, "thinking": map[string]string{"type": "disabled"}, "max_tokens": 800, "messages": []map[string]string{
+	body, _ := json.Marshal(map[string]any{"model": researchModel, "stream": true, "thinking": map[string]string{"type": "disabled"}, "max_tokens": maxTokens, "messages": []map[string]string{
 		{"role": "system", "content": "你是中文题材研究助手。直接回答用户本轮问题，结合历轮对话和本次已核验的资料。区分披露与传闻，仅使用所给材料，不编造业务或链接。完整表格与原文由界面展示，回答用简洁纯文本。" + instruction},
 		{"role": "user", "content": string(input)},
 	}})
@@ -91,7 +113,7 @@ func (s *TopicResearchService) streamReply(ctx context.Context, id uint, key, qu
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+key)
-	res, err := s.client.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		return lead
 	}
@@ -154,6 +176,10 @@ func (s *TopicResearchService) streamReply(ctx context.Context, id uint, key, qu
 			}
 		}
 		if choice.Finish == "stop" {
+			return finish()
+		}
+		if minesweeper && choice.Finish == "length" {
+			publish("\n本轮清单未输出完整，请复核剩余项目和评分。")
 			return finish()
 		}
 	}

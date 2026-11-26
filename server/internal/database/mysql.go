@@ -60,6 +60,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.MarketReviewMember{},
 		&model.MarketReviewStudy{},
 		&model.MarketReviewNote{},
+		&model.TopicResearchSkillGroup{},
 		&model.TopicResearchSkill{},
 		&model.TopicResearchRun{},
 	)

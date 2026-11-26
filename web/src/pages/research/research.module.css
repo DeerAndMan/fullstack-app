@@ -401,7 +401,38 @@
   border-top: 1px solid var(--market-border);
   padding: 14px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
+}
+.questionEditor {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: min(12rem, 100%);
+  max-width: 100%;
+  min-height: 3.25rem;
+  max-height: max(8rem, 55dvh);
+  justify-self: start;
+  resize: both;
+  overflow: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--market-border);
+  border-radius: 8px;
+  background: var(--ant-color-bg-container, transparent);
+  color: var(--market-text);
+  font: inherit;
+  line-height: 1.5;
+}
+.questionEditor:focus {
+  outline: 2px solid var(--market-accent);
+  outline-offset: -1px;
+}
+.editorMeta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--market-secondary);
+  font-size: 0.75rem;
 }
 .composeActions > :first-child {
   width: min(420px, 75%);
@@ -428,7 +459,7 @@
 
 .skillItem {
   display: grid;
-  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 8rem) minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -476,4 +507,88 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   margin: 14px 0;
+}
+
+.editorAnchor { scroll-margin-top: 70px; }
+.documentEditor {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: min(17rem, 100%);
+  max-width: 100%;
+  height: clamp(18rem, 50dvh, 32rem);
+  min-height: 10rem;
+  display: flex;
+  flex-direction: column;
+  resize: both;
+  overflow: hidden;
+  border: 1px solid var(--market-border);
+  border-radius: 8px;
+}
+.documentEditor:focus-within { border-color: var(--market-accent); }
+.formatBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--market-border);
+}
+.formatBar button, .sortGrip {
+  display: inline-grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  cursor: pointer;
+}
+.formatBar button { min-width: 32px; height: 30px; padding-inline: 5px; }
+.formatBar button:disabled { opacity: 0.4; cursor: default; }
+.formatBar button:not(:disabled):hover, .formatBar button[aria-pressed="true"], .sortGrip:hover {
+  background: var(--market-border);
+}
+.documentBody { flex: 1; min-height: 0; overflow: auto; }
+.documentBody :global(.tiptap) {
+  min-height: 100%;
+  padding: 12px clamp(12px, 2vw, 25px) 22px;
+  outline: none;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.documentBody p { margin: 0 0 0.45em; }
+.documentBody h3 { margin: 1em 0 0.45em; font-size: 1.12em; font-weight: 650; }
+.documentBody h3:first-child { margin-top: 0; }
+.documentBody ol, .documentBody ul { margin: 0.4em 0; padding-inline-start: 1.8em; }
+.documentBody ol { list-style-type: decimal; }
+.documentBody ul { list-style-type: disc; }
+.documentBody li p { margin: 0; }
+.formatCount { text-align: end; margin-top: 4px; font-size: 0.8rem; color: var(--market-secondary); }
+.sortGrip { width: 28px; height: 32px; cursor: grab; touch-action: none; color: var(--market-secondary); }
+.skillItem[data-dragging] { position: relative; z-index: 1; box-shadow: 0 4px 16px #0002; }
+.skillItem[data-dragging] .sortGrip { cursor: grabbing; }
+
+.skillGroup {
+  margin-block: 16px;
+  border: 1px solid var(--market-border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.skillGroup[data-over] { border-color: var(--market-accent); }
+.groupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+.groupHeader h2 { margin: 0; overflow-wrap: anywhere; font-size: 1rem; font-weight: 650; }
+.groupHeader h2 span { margin-inline-start: 4px; font-size: 0.8rem; color: var(--market-secondary); }
+.skillGroup .skillList { margin-bottom: 0; }
+.emptyGroup {
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px dashed var(--market-border);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--market-secondary);
 }

@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	errResearchBusy = errcode.New(429, "题材查询正在进行，请稍后再试。", http.StatusTooManyRequests)
-	errResearchKey  = errcode.New(503, "题材查询需要配置服务端 DEEPSEEK_API_KEY。", http.StatusServiceUnavailable)
+	errResearchBusy = errcode.New(429, "AI查询正在进行，请稍后再试。", http.StatusTooManyRequests)
+	errResearchKey  = errcode.New(503, "AI查询需要配置服务端 DEEPSEEK_API_KEY。", http.StatusServiceUnavailable)
 )
 
 type TopicResearchService struct {
@@ -91,6 +91,7 @@ type ResearchRunRequest struct {
 }
 
 type ResearchSkillRequest struct {
+	Markdown     bool   `json:"markdown"`
 	ID           uint   `json:"id"`
 	Name         string `json:"name"`
 	Instructions string `json:"instructions"`
@@ -138,7 +139,7 @@ func (s *TopicResearchService) Skills(ctx context.Context, userID uint) ([]Resea
 	skills := make([]ResearchSkill, 0, len(records))
 	for _, record := range records {
 		skill := ResearchSkill{
-			ID: fmt.Sprintf("custom:%d", record.ID), Name: record.Name, Instructions: record.Instructions,
+			ID: fmt.Sprintf("custom:%d", record.ID), Name: record.Name, Instructions: record.Instructions, GroupID: record.GroupID, Markdown: record.Markdown,
 		}
 		if record.SeedKey != nil {
 			skill.seedKey = *record.SeedKey
@@ -154,11 +155,22 @@ func (s *TopicResearchService) SaveSkill(ctx context.Context, userID uint, req R
 	if name == "" || instructions == "" || len([]rune(name)) > 80 || len([]rune(instructions)) > 3000 {
 		return ResearchSkill{}, errcode.New(400, "Skill 需要名称和正文。名称最多 80 字，正文最多 3000 字。", http.StatusBadRequest)
 	}
-	record, err := s.repo.SaveSkill(ctx, userID, req.ID, name, instructions)
+	record, err := s.repo.SaveSkill(ctx, userID, req.ID, name, instructions, req.Markdown)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ResearchSkill{}, errcode.ErrNotFound
 	}
-	return ResearchSkill{ID: fmt.Sprintf("custom:%d", record.ID), Name: record.Name, Instructions: record.Instructions}, err
+	return ResearchSkill{ID: fmt.Sprintf("custom:%d", record.ID), Name: record.Name, Instructions: record.Instructions, GroupID: record.GroupID, Markdown: record.Markdown}, err
+}
+
+func (s *TopicResearchService) OrderSkills(ctx context.Context, userID uint, ids []uint, move *repository.SkillGroupMove) error {
+	if len(ids) == 0 || (move != nil && !slices.Contains(ids, move.SkillID)) {
+		return errcode.ErrBadRequest
+	}
+	err := s.repo.OrderSkills(ctx, userID, ids, move)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return errcode.New(409, "Skill 列表已变化，请刷新后重新排序。", http.StatusConflict)
+	}
+	return err
 }
 
 func (s *TopicResearchService) Runs(ctx context.Context, userID, beforeID uint) ([]model.TopicResearchRun, error) {
@@ -392,7 +404,13 @@ func (s *TopicResearchService) investigateTopic(ctx context.Context, key, questi
 		go func() {
 			scope, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
-			sources, err := researchSearch(scope, s.client, key, searchQuestion, hosts)
+			var sources []ResearchSource
+			var err error
+			if index == 0 && usesMinesweeper(selected) {
+				sources, err = researchSearchPages(scope, s.client, key, "年度报告全文 审计意见 财务报表 "+searchQuestion, hosts, true)
+			} else {
+				sources, err = researchSearch(scope, s.client, key, searchQuestion, hosts)
+			}
 			searchResults <- searchBatch{index, sources, err}
 		}()
 	}

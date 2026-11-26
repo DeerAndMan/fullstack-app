@@ -1,10 +1,12 @@
 import { z } from "zod";
 
-import { RequestGet, RequestPost } from "@/api/request-schema";
+import { RequestDelete, RequestGet, RequestPost, RequestPut } from "@/api/request-schema";
 import { apiPathsV1 } from "@/api/paths/v1";
 
 export const researchSkillSchema = z.object({
   id: z.string(), name: z.string(), instructions: z.string(), required: z.boolean(), builtIn: z.boolean(),
+  groupId: z.number().optional(),
+  markdown: z.boolean().optional(),
   defaultSelected: z.boolean().optional(),
 });
 
@@ -59,11 +61,36 @@ export type ResearchReport = z.infer<typeof resultSchema>;
 export type ResearchCandidate = z.infer<typeof candidateSchema>;
 export type ResearchSource = z.infer<typeof sourceSchema>;
 
-export const listResearchSkills = async () =>
-  (await RequestGet(`${apiPathsV1.topicResearch}/skills`, { schema: z.array(researchSkillSchema) })).data;
+const skillGroupSchema = z.object({ id: z.number(), name: z.string() });
+const catalogSchema = z.object({ skills: z.array(researchSkillSchema), groups: z.array(skillGroupSchema) });
+export type SkillCatalog = z.infer<typeof catalogSchema>;
+export type SkillGroup = z.infer<typeof skillGroupSchema>;
+export type SkillOrder = { skills: ResearchSkill[]; moved: ResearchSkill };
 
-export const saveResearchSkill = async (values: { id?: number; name: string; instructions: string }) =>
+export const listSkillCatalog = async () =>
+  (await RequestGet(`${apiPathsV1.topicResearch}/skill-catalog`, { schema: catalogSchema })).data;
+
+export const saveSkillGroup = (group: SkillGroup) =>
+  RequestPost(`${apiPathsV1.topicResearch}/skill-groups`, group, { schema: skillGroupSchema });
+
+export const deleteSkillGroup = (id: number) =>
+  RequestDelete(`${apiPathsV1.topicResearch}/skill-groups/${id}`, { schema: z.boolean() });
+
+export function groupSkills(catalog?: SkillCatalog) {
+  const groups = [...(catalog?.groups ?? []), { id: 0, name: "未分组" }];
+  return groups.map(group => ({
+    ...group, skills: (catalog?.skills ?? []).filter(skill => (skill.groupId ?? 0) === group.id),
+  }));
+}
+
+export const saveResearchSkill = async (values: { id?: number; name: string; instructions: string; markdown: boolean }) =>
   (await RequestPost(`${apiPathsV1.topicResearch}/skills`, values, { schema: researchSkillSchema })).data;
+
+export const orderResearchSkills = ({ skills, moved }: SkillOrder) =>
+  RequestPut(`${apiPathsV1.topicResearch}/skills/order`, {
+    ids: skills.map(s => Number(s.id.split(":")[1])),
+    move: { skillId: Number(moved.id.split(":")[1]), groupId: moved.groupId ?? 0 },
+  }, { schema: z.boolean() });
 
 export const listResearchRuns = async (before?: number) =>
   (await RequestGet(`${apiPathsV1.topicResearch}/runs`, { params: { before }, schema: z.array(runSchema) })).data;

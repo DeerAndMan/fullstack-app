@@ -18,7 +18,7 @@ func NewTopicResearchRepository(db *gorm.DB) *TopicResearchRepository {
 
 func (r *TopicResearchRepository) Skills(ctx context.Context, userID uint) ([]model.TopicResearchSkill, error) {
 	rows := []model.TopicResearchSkill{}
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Order("id ASC").Find(&rows).Error
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Order("sort_order DESC, id ASC").Find(&rows).Error
 	return rows, err
 }
 
@@ -26,8 +26,8 @@ func (r *TopicResearchRepository) EnsureSkills(ctx context.Context, rows []model
 	return r.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&rows).Error
 }
 
-func (r *TopicResearchRepository) SaveSkill(ctx context.Context, userID, id uint, name, instructions string) (model.TopicResearchSkill, error) {
-	row := model.TopicResearchSkill{UserID: userID, Name: name, Instructions: instructions}
+func (r *TopicResearchRepository) SaveSkill(ctx context.Context, userID, id uint, name, instructions string, markdown bool) (model.TopicResearchSkill, error) {
+	row := model.TopicResearchSkill{UserID: userID, Name: name, Instructions: instructions, Markdown: markdown}
 	db := r.db.WithContext(ctx)
 	if id == 0 {
 		err := db.Create(&row).Error
@@ -36,9 +36,60 @@ func (r *TopicResearchRepository) SaveSkill(ctx context.Context, userID, id uint
 	if err := db.Where("user_id = ?", userID).First(&row, id).Error; err != nil {
 		return row, err
 	}
-	row.Name, row.Instructions = name, instructions
-	err := db.Model(&row).Where("user_id = ?", userID).Select("name", "instructions").Updates(&row).Error
+	row.Name, row.Instructions, row.Markdown = name, instructions, markdown
+	err := db.Model(&row).Where("user_id = ?", userID).Select("name", "instructions", "markdown").Updates(&row).Error
 	return row, err
+}
+
+type SkillGroupMove struct {
+	SkillID uint `json:"skillId"`
+	GroupID uint `json:"groupId"`
+}
+
+// OrderSkills updates the entire account list atomically.
+func (r *TopicResearchRepository) OrderSkills(ctx context.Context, userID uint, ids []uint, move *SkillGroupMove) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if move != nil && move.GroupID != 0 {
+			var target model.TopicResearchSkillGroup
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("user_id = ?", userID).First(&target, move.GroupID).Error; err != nil {
+				return err
+			}
+		}
+		var rows []model.TopicResearchSkill
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "sort_order").
+			Where("user_id = ?", userID).Order("id ASC").Find(&rows).Error; err != nil {
+			return err
+		}
+		if len(rows) != len(ids) {
+			return gorm.ErrRecordNotFound
+		}
+		ranks := make(map[uint]int, len(rows))
+		for _, row := range rows {
+			ranks[row.ID] = row.SortOrder
+		}
+		for index, id := range ids {
+			old, ok := ranks[id]
+			if !ok {
+				return gorm.ErrRecordNotFound
+			}
+			delete(ranks, id)
+			rank := len(ids) - index
+			updates := map[string]any{}
+			if move != nil && move.SkillID == id {
+				updates["group_id"] = move.GroupID
+			}
+			if rank != old {
+				updates["sort_order"] = rank
+			}
+			if len(updates) > 0 {
+				if err := tx.Model(&model.TopicResearchSkill{}).Where("user_id = ? AND id = ?", userID, id).
+					UpdateColumns(updates).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 }
 
 func (r *TopicResearchRepository) AddRun(ctx context.Context, row *model.TopicResearchRun) error {
